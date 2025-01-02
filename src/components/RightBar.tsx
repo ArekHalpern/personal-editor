@@ -26,6 +26,7 @@ interface RightBarProps {
     timestamp: Date;
   }>;
   onEnhance: (original: string, enhanced: string, prompt: string) => void;
+  onWidthChange?: (width: number) => void;
 }
 
 export function RightBar({
@@ -35,9 +36,17 @@ export function RightBar({
   editor,
   enhancementHistory,
   onEnhance,
+  onWidthChange,
 }: RightBarProps) {
   const [prompt, setPrompt] = React.useState("");
   const [isEnhancing, setIsEnhancing] = React.useState(false);
+  const [width, setWidth] = React.useState(400);
+
+  const handleResize = (delta: number) => {
+    const newWidth = Math.max(200, Math.min(640, width - delta));
+    setWidth(newWidth);
+    onWidthChange?.(newWidth);
+  };
 
   const handleEnhance = async () => {
     if (!prompt || isEnhancing) return;
@@ -68,10 +77,14 @@ export function RightBar({
     <div
       className={cn(
         "group relative flex flex-col border-l bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
-        isCollapsed ? "w-14" : "w-[400px]",
+        isCollapsed ? "w-14" : "",
         className
       )}
+      style={!isCollapsed ? { width: `${width}px` } : undefined}
     >
+      {!isCollapsed && (
+        <ResizeHandle className="left-0 right-auto" onResize={handleResize} />
+      )}
       <div className="flex items-center justify-between p-2 border-b">
         {!isCollapsed && (
           <span className="text-xs font-medium px-2">Assistant</span>

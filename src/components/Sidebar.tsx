@@ -40,6 +40,7 @@ interface SidebarProps {
   ref?: React.RefObject<{ loadFiles: () => Promise<void> }>;
   activeFile?: string;
   editor: Editor | null;
+  onWidthChange?: (width: number) => void;
 }
 
 export const Sidebar = React.forwardRef<
@@ -55,6 +56,7 @@ export const Sidebar = React.forwardRef<
       onFilesLoaded,
       activeFile,
       editor,
+      onWidthChange,
     },
     ref
   ) => {
@@ -62,7 +64,7 @@ export const Sidebar = React.forwardRef<
     const [searchQuery, setSearchQuery] = React.useState("");
     const [editingFile, setEditingFile] = React.useState<string | null>(null);
     const [editingName, setEditingName] = React.useState("");
-    const [width, setWidth] = React.useState(180);
+    const [width, setWidth] = React.useState(300);
     const [isLoading, setIsLoading] = React.useState(false);
     const [loadingStates, setLoadingStates] = React.useState<{
       [key: string]: boolean;
@@ -281,21 +283,23 @@ export const Sidebar = React.forwardRef<
     );
 
     const handleResize = (delta: number) => {
-      const newWidth = Math.max(180, Math.min(576, width + delta)); // Min: 180px, Max: 576px
+      const newWidth = Math.max(200, Math.min(400, width + delta));
       setWidth(newWidth);
+      onWidthChange?.(newWidth);
     };
 
     return (
       <div
         className={cn(
-          "group relative flex flex-col border-r bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
-          isCollapsed ? "w-14" : "",
-          "transition-all duration-300 ease-in-out",
+          "fixed top-0 left-0 flex h-screen flex-col border-r bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-30",
+          isCollapsed && "w-14 transition-[width] duration-300 ease-in-out",
           className
         )}
         style={!isCollapsed ? { width: `${width}px` } : undefined}
       >
-        {!isCollapsed && <ResizeHandle onResize={handleResize} />}
+        {!isCollapsed && (
+          <ResizeHandle onResize={handleResize} className="bottom-9" />
+        )}
         <div className="flex items-center justify-between p-2 border-b">
           {!isCollapsed && (
             <span className="text-xs font-medium px-2">Files</span>
@@ -344,7 +348,7 @@ export const Sidebar = React.forwardRef<
               <Clock className="h-3 w-3 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">Recent</span>
             </div>
-            <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="flex-1 overflow-y-auto">
               <div className="pb-12">
                 {filteredFiles.map((file) => {
                   const isActive =
@@ -445,7 +449,7 @@ export const Sidebar = React.forwardRef<
                 })}
               </div>
             </div>
-            <div className="absolute bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 px-4">
+            <div className="flex-shrink-0 border-t py-2 px-4">
               <ThemeToggle />
             </div>
           </div>

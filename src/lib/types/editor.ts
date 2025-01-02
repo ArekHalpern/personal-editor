@@ -3,6 +3,7 @@ import BubbleMenuExtension from "@tiptap/extension-bubble-menu";
 import Placeholder from "@tiptap/extension-placeholder";
 import { PLACEHOLDER_TEXT } from "../constants";
 import { LineTracker } from "../extensions/lineTracker";
+import { EditorView } from "prosemirror-view";
 
 // Types
 export interface EnhancementHistoryItem {
@@ -78,6 +79,14 @@ export const editorConfig = {
     },
     handleDOMEvents: {
       blur: () => {
+        return false;
+      },
+      focus: (view: EditorView) => {
+        // If cursor is not visible, move it to the end of the content
+        const editor = (view as any).editor;
+        if (editor && editor.state.selection.empty) {
+          editor.commands.focus('end');
+        }
         return false;
       },
     },

@@ -36,6 +36,8 @@ function App() {
   const [isSaving, setIsSaving] = useState(false);
   const [hasFiles, setHasFiles] = useState(false);
   const [createdAt, setCreatedAt] = useState<Date | null>(null);
+  const [rightBarWidth, setRightBarWidth] = useState(400);
+  const [sidebarWidth, setSidebarWidth] = useState(300);
   const sidebarRef = useRef<{ loadFiles: () => Promise<void> }>(null);
 
   // Load most recent file on startup
@@ -275,8 +277,8 @@ function App() {
   const handleFileSelect = (content: string, filename?: string) => {
     if (editor) {
       editor.commands.setContent(content);
-      // Focus at the start of the first heading
-      editor.commands.focus("start");
+      // Focus at the end of the content
+      editor.commands.focus("end");
 
       // Ensure filename is properly formatted
       const fileName = filename?.endsWith(".html")
@@ -322,8 +324,8 @@ function App() {
         onSuccess: (content, fileName) => {
           if (editor) {
             editor.commands.setContent(content);
-            // Focus at the start of the first heading
-            editor.commands.focus("start");
+            // Focus at the end of the content
+            editor.commands.focus("end");
             setCurrentFile(fileName);
             setHasFiles(true);
             setCreatedAt(new Date());
@@ -353,8 +355,14 @@ function App() {
           onFilesLoaded={(files) => setHasFiles(files.length > 0)}
           activeFile={currentFile}
           editor={editor}
+          onWidthChange={setSidebarWidth}
         />
-        <main className="flex-1 overflow-hidden">
+        <main
+          className="flex-1 overflow-hidden"
+          style={{
+            marginLeft: isSidebarCollapsed ? "3.5rem" : `${sidebarWidth}px`,
+          }}
+        >
           <div className="relative h-full">
             {hasFiles ? (
               <>
@@ -362,7 +370,6 @@ function App() {
                   editor={editor}
                   currentFile={currentFile}
                   onTitleChange={(title) => {
-                    // Generate new filename from title
                     const newFileName = getFileName(title);
                     if (newFileName !== currentFile) {
                       const oldPath = `${DEFAULT_PATH}/${currentFile}`;
@@ -385,16 +392,16 @@ function App() {
                 />
                 <BubbleMenu editor={editor} onEnhance={handleEnhance} />
                 <div className="h-[calc(100%-6rem)] overflow-y-auto">
-                  <div className="min-h-full pb-16">
-                    <EditorContent editor={editor} className="h-full" />
-                  </div>
+                  <EditorContent editor={editor} className="h-full" />
                 </div>
                 <Footer
                   lastSaved={lastSaved}
                   saving={isSaving}
                   createdAt={createdAt || undefined}
                   isRightBarCollapsed={isRightBarCollapsed}
-                  rightBarWidth={400}
+                  rightBarWidth={rightBarWidth}
+                  isSidebarCollapsed={isSidebarCollapsed}
+                  sidebarWidth={sidebarWidth}
                 />
               </>
             ) : (
@@ -408,6 +415,7 @@ function App() {
           onToggle={() => setIsRightBarCollapsed(!isRightBarCollapsed)}
           enhancementHistory={enhancementHistory}
           onEnhance={handleEnhance}
+          onWidthChange={setRightBarWidth}
         />
       </div>
     </ThemeProvider>
