@@ -3,5 +3,5 @@ export const AUTO_SAVE_DELAY = 1000; // 1 second
 
 export const PLACEHOLDER_TEXT = {
   title: "Title...",
-  content: "Start writing your content here...",
+  content: "Body...",
 } as const; 

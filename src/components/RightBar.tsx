@@ -1,12 +1,18 @@
 import React from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Label } from "./ui/label";
 import { ScrollArea } from "./ui/scroll-area";
-import { Sparkles, PanelRightClose, PanelRight } from "lucide-react";
+import {
+  Sparkles,
+  PanelRightClose,
+  PanelRight,
+  History,
+  CornerDownLeft,
+} from "lucide-react";
 import { cn } from "../lib/utils";
 import { Editor } from "@tiptap/react";
 import { ResizeHandle } from "./ui/resize-handle";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
 interface RightBarProps {
   className?: string;
@@ -30,12 +36,12 @@ export function RightBar({
   enhancementHistory,
   onEnhance,
 }: RightBarProps) {
-  const [width, setWidth] = React.useState(400); // Start at a larger width
+  const [width, setWidth] = React.useState(400);
   const [isEnhancing, setIsEnhancing] = React.useState(false);
   const [prompt, setPrompt] = React.useState("");
 
   const handleResize = (delta: number) => {
-    const newWidth = Math.max(200, Math.min(640, width - delta)); // Min: 200px, Max: 640px
+    const newWidth = Math.max(200, Math.min(640, width - delta));
     setWidth(newWidth);
   };
 
@@ -45,7 +51,6 @@ export function RightBar({
     const hasSelection = editor.state.selection.content().size > 0;
     const fullContent = editor.getHTML();
 
-    // If there's a selection, enhance just that part
     const selectedText = hasSelection
       ? editor.state.doc.textBetween(
           editor.state.selection.from,
@@ -73,7 +78,6 @@ export function RightBar({
 
       const { enhancedText } = await response.json();
 
-      // If there's a selection, replace just that part
       if (hasSelection) {
         editor
           .chain()
@@ -82,11 +86,9 @@ export function RightBar({
           .insertContent(enhancedText)
           .run();
       } else {
-        // Otherwise replace the entire content
         editor.commands.setContent(enhancedText);
       }
 
-      // Update history through parent
       onEnhance(selectedText, enhancedText, prompt);
       setPrompt("");
     } catch (error) {
@@ -104,10 +106,8 @@ export function RightBar({
   const formatText = (text: string, maxLength: number = 150) => {
     if (text.length <= maxLength) return text;
     const truncated = text.slice(0, maxLength);
-    // Find the last line break before maxLength
     const lastLineBreak = truncated.lastIndexOf("\n");
     if (lastLineBreak > maxLength * 0.8) {
-      // Only break at newline if it's near the end
       return truncated.slice(0, lastLineBreak) + "...";
     }
     return truncated + "...";
@@ -125,10 +125,8 @@ export function RightBar({
       {!isCollapsed && (
         <ResizeHandle className="left-0 right-auto" onResize={handleResize} />
       )}
-      <div className="flex items-center justify-between p-2 border-b">
-        {!isCollapsed && (
-          <span className="text-sm font-medium px-2">Writing Agent</span>
-        )}
+
+      <div className="flex justify-end border-b px-2 py-1">
         <Button
           variant="ghost"
           size="sm"
@@ -143,103 +141,117 @@ export function RightBar({
         </Button>
       </div>
 
-      {!isCollapsed && (
+      {!isCollapsed ? (
         <div className="flex-1 overflow-hidden">
-          <div className="p-4 space-y-4">
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="How can I help edit?"
-                  value={prompt}
-                  onChange={(e) => setPrompt(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && prompt && !isEnhancing) {
-                      handleEnhance();
-                    }
-                  }}
-                />
-                <Button
-                  size="icon"
-                  disabled={!prompt || isEnhancing}
-                  onClick={handleEnhance}
+          <Tabs defaultValue="enhance" className="h-full">
+            <div className="flex items-center border-b px-1">
+              <TabsList className="h-10 p-1 gap-1">
+                <TabsTrigger
+                  value="enhance"
+                  className="flex items-center gap-2"
                 >
-                  <Sparkles className="h-4 w-4" />
-                </Button>
-              </div>
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Agent
+                </TabsTrigger>
+                <TabsTrigger
+                  value="history"
+                  className="flex items-center gap-2"
+                >
+                  <History className="h-3.5 w-3.5" />
+                  History
+                </TabsTrigger>
+              </TabsList>
             </div>
 
-            <div className="space-y-2">
-              <Label>Editing History</Label>
-              <ScrollArea className="h-[calc(100vh-12rem)] pr-4">
+            <TabsContent value="enhance" className="p-4 mt-0">
+              <div className="space-y-2">
+                <div className="relative">
+                  <Input
+                    placeholder="How can I help edit?"
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && prompt && !isEnhancing) {
+                        handleEnhance();
+                      }
+                    }}
+                    className="pr-8"
+                  />
+                  <button
+                    className={cn(
+                      "absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors",
+                      (!prompt || isEnhancing) &&
+                        "opacity-50 pointer-events-none"
+                    )}
+                    onClick={handleEnhance}
+                    disabled={!prompt || isEnhancing}
+                  >
+                    <CornerDownLeft className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent
+              value="history"
+              className="p-4 mt-0 h-[calc(100%-3rem)]"
+            >
+              <ScrollArea className="h-full pr-4">
                 <div className="space-y-4">
-                  {enhancementHistory.map((item, index) => {
-                    const originalText = stripHtmlTags(item.original);
-                    const enhancedText = stripHtmlTags(item.enhanced);
-                    return (
-                      <div
-                        key={index}
-                        className="p-3 rounded-lg border bg-card text-card-foreground text-sm space-y-2"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="text-xs text-muted-foreground">
-                            {item.timestamp.toLocaleTimeString()}
-                          </div>
-                          {originalText === enhancedText && (
-                            <div className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
-                              Full Document
-                            </div>
-                          )}
+                  {enhancementHistory.map((item, index) => (
+                    <div
+                      key={index}
+                      className="p-3 rounded-lg border bg-card text-card-foreground text-sm space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="text-xs text-muted-foreground">
+                          {item.timestamp.toLocaleTimeString()}
                         </div>
-                        <div className="space-y-1.5">
-                          <div className="text-xs font-medium text-muted-foreground">
-                            Prompt:
-                          </div>
-                          <div className="pl-2 border-l-2 border-muted">
-                            {item.prompt}
-                          </div>
-                        </div>
-                        {originalText !== enhancedText && (
-                          <div className="space-y-3">
-                            <div className="space-y-1">
-                              <div className="text-xs font-medium text-muted-foreground">
-                                Original:
-                              </div>
-                              <div className="pl-2 border-l-2 border-muted text-muted-foreground line-through whitespace-pre-line">
-                                {formatText(originalText)}
-                              </div>
-                            </div>
-                            <div className="space-y-1">
-                              <div className="text-xs font-medium text-muted-foreground">
-                                Enhanced:
-                              </div>
-                              <div className="pl-2 border-l-2 border-muted whitespace-pre-line">
-                                {formatText(enhancedText)}
-                              </div>
-                            </div>
+                        {stripHtmlTags(item.original) ===
+                          stripHtmlTags(item.enhanced) && (
+                          <div className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
+                            Full Document
                           </div>
                         )}
                       </div>
-                    );
-                  })}
+                      <div className="space-y-1.5">
+                        <div className="text-xs font-medium text-muted-foreground">
+                          Prompt:
+                        </div>
+                        <div className="pl-2 border-l-2 border-muted">
+                          {item.prompt}
+                        </div>
+                      </div>
+                      {stripHtmlTags(item.original) !==
+                        stripHtmlTags(item.enhanced) && (
+                        <div className="space-y-3">
+                          <div className="space-y-1">
+                            <div className="text-xs font-medium text-muted-foreground">
+                              Original:
+                            </div>
+                            <div className="pl-2 border-l-2 border-muted text-muted-foreground line-through whitespace-pre-line">
+                              {formatText(stripHtmlTags(item.original))}
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <div className="text-xs font-medium text-muted-foreground">
+                              Enhanced:
+                            </div>
+                            <div className="pl-2 border-l-2 border-muted whitespace-pre-line">
+                              {formatText(stripHtmlTags(item.enhanced))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </ScrollArea>
-            </div>
-          </div>
+            </TabsContent>
+          </Tabs>
         </div>
-      )}
-
-      {isCollapsed && (
-        <div className="py-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="w-full h-10"
-            disabled={isEnhancing}
-            onClick={() => onToggle()}
-          >
-            <Sparkles className="h-4 w-4" />
-          </Button>
-        </div>
+      ) : (
+        <div className="flex-1" />
       )}
     </div>
   );
