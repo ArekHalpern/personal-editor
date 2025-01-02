@@ -26,20 +26,24 @@ export const findNextAvailableNumber = async (
 };
 
 export const generateUntitledName = async (): Promise<string> => {
-  const baseNamePattern = /^Untitled(?:-(\d+))?\.html$/;
-  const nextNum = await findNextAvailableNumber(baseNamePattern, true);
+  const baseNamePattern = /^Untitled(?:-(\d+))?\.html$/i;
+  const nextNum = await findNextAvailableNumber(baseNamePattern);
   
-  return nextNum === 0
-    ? "Untitled.html"
-    : `Untitled-${String(nextNum).padStart(2, "0")}.html`;
+  // If it's the first file, just return "Untitled.html"
+  if (nextNum === 1) {
+    return "Untitled.html";
+  }
+  
+  // Otherwise, add the number with padding
+  return `Untitled-${String(nextNum).padStart(2, "0")}.html`;
 };
 
 export const generateNumberedFileName = async (baseName: string): Promise<string> => {
-  const sanitizedName = sanitizeFileName(baseName);
-  const baseNamePattern = new RegExp(`^${sanitizedName}(?:-(\\d+))?\\.html$`);
+  // Preserve the original text but ensure it's safe for the filesystem
+  const safeName = sanitizeFileName(baseName);
+  const baseNamePattern = new RegExp(`^${safeName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-(\\d+)\\.html$`);
   const nextNum = await findNextAvailableNumber(baseNamePattern);
-  
-  return `${sanitizedName}-${String(nextNum).padStart(2, "0")}.html`;
+  return `${safeName}-${String(nextNum).padStart(2, "0")}.html`;
 };
 
 export const safeRename = async ({

@@ -6,25 +6,23 @@ interface SaveIndicatorProps {
 
 export function SaveIndicator({ lastSaved, saving }: SaveIndicatorProps) {
   return (
-    <div className="absolute bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 px-4">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        {saving ? (
-          <>
-            <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
-            <span>Saving...</span>
-          </>
-        ) : lastSaved ? (
-          <>
-            <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            <span>Saved {formatTime(lastSaved)}</span>
-          </>
-        ) : (
-          <>
-            <div className="w-1.5 h-1.5 rounded-full bg-muted" />
-            <span>No changes</span>
-          </>
-        )}
-      </div>
+    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      {saving ? (
+        <>
+          <div className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse" />
+          <span>Saving...</span>
+        </>
+      ) : lastSaved ? (
+        <>
+          <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+          <span>Saved {formatTime(lastSaved)}</span>
+        </>
+      ) : (
+        <>
+          <div className="w-1.5 h-1.5 rounded-full bg-muted" />
+          <span>No changes</span>
+        </>
+      )}
     </div>
   );
 }

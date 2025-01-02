@@ -4,9 +4,15 @@ import { Sidebar } from "./components/Sidebar";
 import { RightBar } from "./components/RightBar";
 import { BubbleMenu } from "./components/BubbleMenu";
 import { ThemeProvider } from "./components/theme-provider";
-import { writeTextFile, mkdir, BaseDirectory } from "@tauri-apps/plugin-fs";
+import {
+  writeTextFile,
+  mkdir,
+  BaseDirectory,
+  readDir,
+  readTextFile,
+} from "@tauri-apps/plugin-fs";
 import "./index.css";
-import { SaveIndicator } from "./components/SaveIndicator";
+import { Footer } from "./components/Footer";
 import { debounce } from "lodash";
 import { EmptyState } from "./components/EmptyState";
 import { createNewFile } from "./lib/utils/filesystem/createNewFile";
@@ -16,6 +22,7 @@ import {
   generateNumberedFileName,
   safeRename,
 } from "./lib/utils/filesystem/fileUtils";
+import { getFileName } from "./lib/utils/string";
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -27,7 +34,51 @@ function App() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [hasFiles, setHasFiles] = useState(false);
+  const [createdAt, setCreatedAt] = useState<Date | null>(null);
   const sidebarRef = useRef<{ loadFiles: () => Promise<void> }>(null);
+
+  // Load most recent file on startup
+  useEffect(() => {
+    const loadMostRecentFile = async () => {
+      try {
+        // Ensure directory exists
+        await mkdir(DEFAULT_PATH, {
+          recursive: true,
+          baseDir: BaseDirectory.AppData,
+        });
+
+        // Get all files
+        const files = await readDir(DEFAULT_PATH, {
+          baseDir: BaseDirectory.AppData,
+        });
+
+        // Filter HTML files and sort by name (most recent first)
+        const htmlFiles = files
+          .filter((file) => file.name?.endsWith(".html"))
+          .sort((a, b) => {
+            // Ensure we have valid file names
+            if (!a.name || !b.name) return 0;
+            // Sort in reverse order so most recent is first
+            return b.name.localeCompare(a.name);
+          });
+
+        // If we have files, load the most recent one
+        if (htmlFiles.length > 0 && htmlFiles[0].name) {
+          const content = await readTextFile(
+            `${DEFAULT_PATH}/${htmlFiles[0].name}`,
+            {
+              baseDir: BaseDirectory.AppData,
+            }
+          );
+          handleFileSelect(content, htmlFiles[0].name);
+        }
+      } catch (error) {
+        console.error("Error loading most recent file:", error);
+      }
+    };
+
+    loadMostRecentFile();
+  }, []); // Run once on startup
 
   // Create debounced save function with useRef to maintain reference
   const debouncedSaveRef = useRef(
@@ -88,6 +139,7 @@ function App() {
   const editor = useEditor({
     ...editorConfig,
     content: "",
+    autofocus: "start",
   });
 
   // Handle editor cleanup
@@ -126,12 +178,8 @@ function App() {
       if (heading?.content?.[0]?.text) {
         const headerText = heading.content[0].text.trim();
         if (headerText) {
-          // Generate new filename from header text
-          const sanitizedHeader = headerText
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-+|-+$/g, "");
-          const newFileName = `${sanitizedHeader}.html`;
+          // Generate new filename from header text, preserving symbols
+          const newFileName = getFileName(headerText);
 
           if (newFileName !== currentFile) {
             const oldPath = `${DEFAULT_PATH}/${currentFile}`;
@@ -155,7 +203,7 @@ function App() {
               if (!result.success && result.reason === "file_exists") {
                 // If file exists, generate a numbered filename
                 const newFileNameWithNumber = await generateNumberedFileName(
-                  sanitizedHeader
+                  headerText
                 );
                 const newPathWithNumber = `${DEFAULT_PATH}/${newFileNameWithNumber}`;
 
@@ -226,7 +274,9 @@ function App() {
   const handleFileSelect = (content: string, filename?: string) => {
     if (editor) {
       editor.commands.setContent(content);
-      editor.commands.setTextSelection(1); // Move cursor to start of content
+      // Focus at the start of the first heading
+      editor.commands.focus("start");
+
       // Ensure filename is properly formatted
       const fileName = filename?.endsWith(".html")
         ? filename
@@ -234,6 +284,17 @@ function App() {
       console.log("Selected file:", fileName);
       setCurrentFile(fileName);
       setHasFiles(true);
+
+      // Extract creation date from filename if it exists, otherwise use current date
+      const dateMatch = fileName.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (dateMatch) {
+        const [, year, month, day] = dateMatch;
+        setCreatedAt(
+          new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+        );
+      } else {
+        setCreatedAt(new Date());
+      }
     }
   };
 
@@ -260,9 +321,11 @@ function App() {
         onSuccess: (content, fileName) => {
           if (editor) {
             editor.commands.setContent(content);
-            editor.commands.setTextSelection(1); // Move cursor to start
+            // Focus at the start of the first heading
+            editor.commands.focus("start");
             setCurrentFile(fileName);
             setHasFiles(true);
+            setCreatedAt(new Date());
           }
         },
         onLoadFiles: async () => {
@@ -288,6 +351,7 @@ function App() {
           onFileSelect={handleFileSelect}
           onFilesLoaded={(files) => setHasFiles(files.length > 0)}
           activeFile={currentFile}
+          editor={editor}
         />
         <main className="flex-1 overflow-hidden">
           <div className="relative h-full">
@@ -299,7 +363,11 @@ function App() {
                     editor={editor}
                     className="h-full overflow-y-auto"
                   />
-                  <SaveIndicator lastSaved={lastSaved} saving={isSaving} />
+                  <Footer
+                    lastSaved={lastSaved}
+                    saving={isSaving}
+                    createdAt={createdAt || undefined}
+                  />
                 </div>
               </>
             ) : (

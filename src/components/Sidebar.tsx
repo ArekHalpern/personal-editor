@@ -22,10 +22,14 @@ import {
   exists,
   rename,
   BaseDirectory,
+  writeTextFile,
 } from "@tauri-apps/plugin-fs";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { DEFAULT_PATH } from "../lib/constants";
 import { FileItem } from "../lib/types/file";
+import { getDisplayName, getFileName } from "../lib/utils/string";
+import { Editor } from "@tiptap/react";
+import { Spinner } from "./ui/spinner";
 
 interface SidebarProps {
   className?: string;
@@ -35,6 +39,7 @@ interface SidebarProps {
   onFilesLoaded: (files: FileItem[]) => void;
   ref?: React.RefObject<{ loadFiles: () => Promise<void> }>;
   activeFile?: string;
+  editor: Editor | null;
 }
 
 export const Sidebar = React.forwardRef<
@@ -49,6 +54,7 @@ export const Sidebar = React.forwardRef<
       onFileSelect,
       onFilesLoaded,
       activeFile,
+      editor,
     },
     ref
   ) => {
@@ -57,8 +63,17 @@ export const Sidebar = React.forwardRef<
     const [editingFile, setEditingFile] = React.useState<string | null>(null);
     const [editingName, setEditingName] = React.useState("");
     const [width, setWidth] = React.useState(180); // Start at minimum width
+    const [isLoading, setIsLoading] = React.useState(false);
+    const [loadingStates, setLoadingStates] = React.useState<{
+      [key: string]: boolean;
+    }>({});
+
+    const setFileLoading = (path: string, loading: boolean) => {
+      setLoadingStates((prev) => ({ ...prev, [path]: loading }));
+    };
 
     const loadFiles = async () => {
+      setIsLoading(true);
       try {
         // Ensure directory exists
         await mkdir(DEFAULT_PATH, {
@@ -70,49 +85,21 @@ export const Sidebar = React.forwardRef<
           baseDir: BaseDirectory.AppData,
         });
 
-        const fileItems: FileItem[] = files
-          .filter((file) => file.name !== null && file.name.endsWith(".html"))
-          .map((file) => {
-            // Extract date from filename (assumes YYYY-MM-DD format)
-            const name = file.name!.replace(".html", "");
-            const dateParts = name.split("-");
-            if (dateParts.length >= 3) {
-              const [year, month, day, ...rest] = dateParts;
-              const displayDate = `${parseInt(month)}/${parseInt(day)}/${year}`;
-              const suffix = rest.length > 0 ? `-${rest.join("-")}` : "";
-              return {
-                name: displayDate + suffix,
-                path: file.name!,
-                lastModified: new Date(),
-              };
-            }
-            return {
-              name,
-              path: file.name!,
-              lastModified: new Date(),
-            };
-          })
-          .sort((a, b) => {
-            // Sort by date (newest first) and then by suffix number if dates are the same
-            const aDate = a.path.split("-").slice(0, 3).join("-");
-            const bDate = b.path.split("-").slice(0, 3).join("-");
+        const htmlFiles = files
+          .filter((file) => file.name?.endsWith(".html"))
+          .map((file) => ({
+            name: getDisplayName(file.name!),
+            path: file.name!,
+            lastModified: new Date(),
+          }))
+          .sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime());
 
-            if (aDate === bDate) {
-              // If dates are the same, sort by suffix number
-              const aNum = parseInt(a.path.split("-")[3] || "0");
-              const bNum = parseInt(b.path.split("-")[3] || "0");
-              return bNum - aNum;
-            }
-
-            // Sort by date in reverse chronological order
-            return bDate.localeCompare(aDate);
-          });
-
-        setRecentFiles(fileItems);
-        onFilesLoaded(fileItems);
+        setRecentFiles(htmlFiles);
+        onFilesLoaded(htmlFiles);
       } catch (error) {
         console.error("Error loading files:", error);
-        onFilesLoaded([]);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -126,6 +113,7 @@ export const Sidebar = React.forwardRef<
     }, []);
 
     const handleCreateNewFile = async () => {
+      setIsLoading(true);
       try {
         await createNewFile({
           onSuccess: (content, fileName) => {
@@ -138,10 +126,13 @@ export const Sidebar = React.forwardRef<
         });
       } catch (error) {
         console.error("Error creating file:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     const handleFileSelect = async (file: FileItem) => {
+      setFileLoading(file.path, true);
       try {
         const content = await readTextFile(`${DEFAULT_PATH}/${file.path}`, {
           baseDir: BaseDirectory.AppData,
@@ -149,10 +140,13 @@ export const Sidebar = React.forwardRef<
         onFileSelect(content, file.path);
       } catch (error) {
         console.error("Error reading file:", error);
+      } finally {
+        setFileLoading(file.path, false);
       }
     };
 
     const deleteFile = async (path: string) => {
+      setFileLoading(path, true);
       const confirmed = await ask(
         "Are you sure you want to delete this file?",
         {
@@ -170,12 +164,13 @@ export const Sidebar = React.forwardRef<
           console.error("Error deleting file:", error);
         }
       }
+      setFileLoading(path, false);
     };
 
     const handleRename = async (file: FileItem) => {
       // Start editing with the current display name
       setEditingFile(file.path);
-      setEditingName(file.name);
+      setEditingName(getDisplayName(file.name));
     };
 
     const handleRenameSubmit = async (
@@ -183,20 +178,10 @@ export const Sidebar = React.forwardRef<
       newDisplayName: string
     ) => {
       try {
-        // Convert display name (M/D/YYYY) back to file format (YYYY-MM-DD)
-        let newFileName = newDisplayName;
-        const dateParts = newDisplayName.split("/");
-        if (dateParts.length === 3) {
-          const [month, day, year] = dateParts;
-          newFileName = `${year}-${month.padStart(2, "0")}-${day.padStart(
-            2,
-            "0"
-          )}`;
-        }
-
-        // Add back the .html extension
+        // Keep the original symbols and case when renaming
+        const newFileName = getFileName(newDisplayName);
         const oldPath = `${DEFAULT_PATH}/${file.path}`;
-        const newPath = `${DEFAULT_PATH}/${newFileName}.html`;
+        const newPath = `${DEFAULT_PATH}/${newFileName}`;
 
         // Check if target file already exists
         const fileExists = await exists(newPath, {
@@ -210,10 +195,74 @@ export const Sidebar = React.forwardRef<
           return;
         }
 
+        // Get current content if this is the active file
+        let content = "";
+        if (editor && file.path === activeFile) {
+          content = editor.getHTML();
+        } else {
+          content = await readTextFile(`${DEFAULT_PATH}/${file.path}`, {
+            baseDir: BaseDirectory.AppData,
+          });
+        }
+
+        // Save content to old location first
+        await writeTextFile(oldPath, content, {
+          baseDir: BaseDirectory.AppData,
+        });
+
+        // Perform the rename
         await rename(oldPath, newPath, {
           oldPathBaseDir: BaseDirectory.AppData,
           newPathBaseDir: BaseDirectory.AppData,
         });
+
+        // Update the editor's header content if this is the active file
+        if (editor && file.path === activeFile) {
+          // Find the first heading node and its position
+          const firstHeading = editor
+            .getJSON()
+            .content?.find(
+              (node) => node.type === "heading" && node.attrs?.level === 1
+            );
+
+          if (firstHeading) {
+            // Update existing heading
+            editor
+              .chain()
+              .focus()
+              .clearContent()
+              .insertContent([
+                {
+                  type: "heading",
+                  attrs: { level: 1 },
+                  content: [{ type: "text", text: newDisplayName }],
+                },
+                { type: "paragraph" },
+              ])
+              .run();
+          } else {
+            // Create new heading
+            editor
+              .chain()
+              .focus()
+              .clearContent()
+              .insertContent([
+                {
+                  type: "heading",
+                  attrs: { level: 1 },
+                  content: [{ type: "text", text: newDisplayName }],
+                },
+                { type: "paragraph" },
+              ])
+              .run();
+          }
+
+          // Save the content to the new location
+          await writeTextFile(newPath, editor.getHTML(), {
+            baseDir: BaseDirectory.AppData,
+          });
+        }
+
         setEditingFile(null);
         setEditingName("");
         await loadFiles();
@@ -275,8 +324,13 @@ export const Sidebar = React.forwardRef<
                 size="sm"
                 className="w-full justify-start gap-2 text-xs h-7"
                 onClick={handleCreateNewFile}
+                disabled={isLoading}
               >
-                <FilePlus className="h-3 w-3" />
+                {isLoading ? (
+                  <Spinner size="sm" className="mr-2" />
+                ) : (
+                  <FilePlus className="h-3 w-3" />
+                )}
                 New File
               </Button>
             </div>
@@ -292,6 +346,8 @@ export const Sidebar = React.forwardRef<
                     (activeFile?.endsWith(".html")
                       ? activeFile
                       : `${activeFile}.html`);
+                  const isFileLoading = loadingStates[file.path];
+
                   return (
                     <div
                       key={file.path}
@@ -299,11 +355,14 @@ export const Sidebar = React.forwardRef<
                         "w-full text-left group/item flex items-center gap-2 px-4 py-1.5 hover:bg-accent cursor-pointer",
                         isActive && "bg-accent"
                       )}
-                      onClick={() => handleFileSelect(file)}
+                      onClick={() => !isFileLoading && handleFileSelect(file)}
                       role="button"
                       tabIndex={0}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === "Space") {
+                        if (
+                          (e.key === "Enter" || e.key === "Space") &&
+                          !isFileLoading
+                        ) {
                           handleFileSelect(file);
                         }
                       }}
@@ -331,33 +390,49 @@ export const Sidebar = React.forwardRef<
                             onClick={(e) => e.stopPropagation()}
                           />
                         ) : (
-                          <span className="truncate text-xs">{file.name}</span>
+                          <span
+                            className={cn(
+                              "truncate text-xs",
+                              isFileLoading && "text-muted-foreground"
+                            )}
+                          >
+                            {isFileLoading ? (
+                              <div className="flex items-center gap-2">
+                                <Spinner size="sm" />
+                                {getDisplayName(file.name)}
+                              </div>
+                            ) : (
+                              getDisplayName(file.name)
+                            )}
+                          </span>
                         )}
                       </div>
-                      <div className="flex opacity-0 group-hover/item:opacity-100 transition-opacity shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRename(file);
-                          }}
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteFile(file.path);
-                          }}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
+                      {!isFileLoading && (
+                        <div className="flex opacity-0 group-hover/item:opacity-100 transition-opacity shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRename(file);
+                            }}
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteFile(file.path);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
