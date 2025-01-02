@@ -4,26 +4,15 @@ import { Sidebar } from "./components/Sidebar";
 import { RightBar } from "./components/RightBar";
 import { BubbleMenu } from "./components/BubbleMenu";
 import { ThemeProvider } from "./components/theme-provider";
-import {
-  writeTextFile,
-  mkdir,
-  BaseDirectory,
-  readDir,
-  readTextFile,
-} from "@tauri-apps/plugin-fs";
 import "./index.css";
 import { Footer } from "./components/Footer";
 import { debounce } from "lodash";
 import { EmptyState } from "./components/EmptyState";
-import { createNewFile } from "./lib/utils/filesystem/createNewFile";
-import { DEFAULT_PATH, AUTO_SAVE_DELAY } from "./lib/constants";
+import { AUTO_SAVE_DELAY } from "./lib/constants";
 import { editorConfig, EnhancementHistoryItem } from "./lib/types/editor";
-import {
-  generateNumberedFileName,
-  safeRename,
-} from "./lib/utils/filesystem/fileUtils";
 import { getFileName } from "./lib/utils/string";
 import { Header } from "./components/Header";
+import { FileService } from "./lib/utils/filesystem/fileService";
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -45,35 +34,15 @@ function App() {
     const loadMostRecentFile = async () => {
       try {
         // Ensure directory exists
-        await mkdir(DEFAULT_PATH, {
-          recursive: true,
-          baseDir: BaseDirectory.AppData,
-        });
+        await FileService.ensureDirectory();
 
         // Get all files
-        const files = await readDir(DEFAULT_PATH, {
-          baseDir: BaseDirectory.AppData,
-        });
-
-        // Filter HTML files and sort by name (most recent first)
-        const htmlFiles = files
-          .filter((file) => file.name?.endsWith(".html"))
-          .sort((a, b) => {
-            // Ensure we have valid file names
-            if (!a.name || !b.name) return 0;
-            // Sort in reverse order so most recent is first
-            return b.name.localeCompare(a.name);
-          });
+        const files = await FileService.loadFiles();
 
         // If we have files, load the most recent one
-        if (htmlFiles.length > 0 && htmlFiles[0].name) {
-          const content = await readTextFile(
-            `${DEFAULT_PATH}/${htmlFiles[0].name}`,
-            {
-              baseDir: BaseDirectory.AppData,
-            }
-          );
-          handleFileSelect(content, htmlFiles[0].name);
+        if (files.length > 0) {
+          const content = await FileService.readFile(files[0].path);
+          handleFileSelect(content, files[0].path);
         }
       } catch (error) {
         console.error("Error loading most recent file:", error);
@@ -92,33 +61,10 @@ function App() {
         try {
           setIsSaving(true);
 
-          // Create directory if it doesn't exist
-          await mkdir(DEFAULT_PATH, {
-            recursive: true,
-            baseDir: BaseDirectory.AppData,
-          });
-
-          // Ensure file path is properly formatted
-          const fileName = filePath.includes("/")
-            ? filePath.split("/").pop()!
-            : filePath;
-          const fullPath = `${DEFAULT_PATH}/${fileName}`;
-
-          console.log("Saving file:", {
-            fileName,
-            fullPath,
-            baseDir: "AppData",
-            contentLength: content.length,
-            isRename,
-          });
-
-          // Write the file
-          await writeTextFile(fullPath, content, {
-            baseDir: BaseDirectory.AppData,
-          });
+          await FileService.writeFile(filePath, content);
 
           setLastSaved(new Date());
-          console.log("File saved successfully:", fileName);
+          console.log("File saved successfully:", filePath);
 
           // Only refresh sidebar if this was a rename operation
           if (isRename) {
@@ -128,7 +74,7 @@ function App() {
           console.error("Error saving file:", {
             error,
             filePath,
-            fullPath: `${DEFAULT_PATH}/${filePath}`,
+            fullPath: FileService.getFullPath(filePath),
           });
         } finally {
           setIsSaving(false);
@@ -185,40 +131,25 @@ function App() {
           const newFileName = getFileName(headerText);
 
           if (newFileName !== currentFile) {
-            const oldPath = `${DEFAULT_PATH}/${currentFile}`;
-            const newPath = `${DEFAULT_PATH}/${newFileName}`;
-
             try {
               // Cancel any pending saves
               debouncedSaveRef.current.cancel();
 
               // Try to rename the file
-              const result = await safeRename({
-                oldPath,
-                newPath,
-                content: editor.getHTML(),
-                onRename: (fileName) => {
-                  setCurrentFile(fileName);
-                  debouncedSaveRef.current(fileName, editor.getHTML(), true);
-                },
-              });
+              const result = await FileService.renameFile(
+                currentFile,
+                headerText,
+                editor,
+                true
+              );
 
-              if (!result.success && result.reason === "file_exists") {
-                // If file exists, generate a numbered filename
-                const newFileNameWithNumber = await generateNumberedFileName(
-                  headerText
+              if (result.success) {
+                setCurrentFile(result.fileName!);
+                debouncedSaveRef.current(
+                  result.fileName!,
+                  editor.getHTML(),
+                  true
                 );
-                const newPathWithNumber = `${DEFAULT_PATH}/${newFileNameWithNumber}`;
-
-                await safeRename({
-                  oldPath,
-                  newPath: newPathWithNumber,
-                  content: editor.getHTML(),
-                  onRename: (fileName) => {
-                    setCurrentFile(fileName);
-                    debouncedSaveRef.current(fileName, editor.getHTML(), true);
-                  },
-                });
               }
 
               return;
@@ -252,26 +183,6 @@ function App() {
     return () => {
       debouncedSaveRef.current.cancel();
     };
-  }, []);
-
-  // Initialize the documents directory
-  useEffect(() => {
-    const initDirectory = async () => {
-      try {
-        await mkdir(DEFAULT_PATH, {
-          recursive: true,
-          baseDir: BaseDirectory.AppData,
-        });
-      } catch (error) {
-        if (
-          !(error instanceof Error) ||
-          !error.message.includes("File exists")
-        ) {
-          console.error("Directory initialization error:", error);
-        }
-      }
-    };
-    initDirectory();
   }, []);
 
   const handleFileSelect = (content: string, filename?: string) => {
@@ -320,7 +231,7 @@ function App() {
   // Add createNewFile function
   const handleCreateNewFile = async () => {
     try {
-      await createNewFile({
+      await FileService.createNewFile({
         onSuccess: (content, fileName) => {
           if (editor) {
             editor.commands.setContent(content);
@@ -372,21 +283,20 @@ function App() {
                   onTitleChange={(title) => {
                     const newFileName = getFileName(title);
                     if (newFileName !== currentFile) {
-                      const oldPath = `${DEFAULT_PATH}/${currentFile}`;
-                      const newPath = `${DEFAULT_PATH}/${newFileName}`;
-                      safeRename({
-                        oldPath,
-                        newPath,
-                        content: editor.getHTML(),
-                        onRename: (fileName) => {
-                          setCurrentFile(fileName);
-                          debouncedSaveRef.current(
-                            fileName,
-                            editor.getHTML(),
-                            true
-                          );
-                        },
-                      });
+                      FileService.renameFile(currentFile, title, editor, true)
+                        .then((result) => {
+                          if (result.success) {
+                            setCurrentFile(result.fileName!);
+                            debouncedSaveRef.current(
+                              result.fileName!,
+                              editor.getHTML(),
+                              true
+                            );
+                          }
+                        })
+                        .catch((error) => {
+                          console.error("Error during rename:", error);
+                        });
                     }
                   }}
                 />

@@ -43,7 +43,7 @@ export function RightBar({
   const [width, setWidth] = React.useState(400);
 
   const handleResize = (delta: number) => {
-    const newWidth = Math.max(200, Math.min(640, width - delta));
+    const newWidth = Math.max(200, Math.min(800, width - delta));
     setWidth(newWidth);
     onWidthChange?.(newWidth);
   };

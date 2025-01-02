@@ -2,6 +2,8 @@ export interface FileItem {
   name: string;
   path: string;
   lastModified: Date;
+  isDirectory: boolean;
+  children?: FileItem[];
 }
 
 export interface FileRenameOptions {
