@@ -62,7 +62,7 @@ export const Sidebar = React.forwardRef<
     const [searchQuery, setSearchQuery] = React.useState("");
     const [editingFile, setEditingFile] = React.useState<string | null>(null);
     const [editingName, setEditingName] = React.useState("");
-    const [width, setWidth] = React.useState(180); // Start at minimum width
+    const [width, setWidth] = React.useState(180);
     const [isLoading, setIsLoading] = React.useState(false);
     const [loadingStates, setLoadingStates] = React.useState<{
       [key: string]: boolean;
@@ -132,6 +132,8 @@ export const Sidebar = React.forwardRef<
     };
 
     const handleFileSelect = async (file: FileItem) => {
+      if (file.path === activeFile) return; // Don't reload if it's already active
+
       setFileLoading(file.path, true);
       try {
         const content = await readTextFile(`${DEFAULT_PATH}/${file.path}`, {
@@ -141,7 +143,10 @@ export const Sidebar = React.forwardRef<
       } catch (error) {
         console.error("Error reading file:", error);
       } finally {
-        setFileLoading(file.path, false);
+        // Small delay before removing loading state to prevent flicker
+        setTimeout(() => {
+          setFileLoading(file.path, false);
+        }, 300);
       }
     };
 
@@ -285,6 +290,7 @@ export const Sidebar = React.forwardRef<
         className={cn(
           "group relative flex flex-col border-r bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
           isCollapsed ? "w-14" : "",
+          "transition-all duration-300 ease-in-out",
           className
         )}
         style={!isCollapsed ? { width: `${width}px` } : undefined}
@@ -353,6 +359,7 @@ export const Sidebar = React.forwardRef<
                       key={file.path}
                       className={cn(
                         "w-full text-left group/item flex items-center gap-2 px-4 py-1.5 hover:bg-accent cursor-pointer",
+                        "transition-colors duration-200 ease-in-out",
                         isActive && "bg-accent"
                       )}
                       onClick={() => !isFileLoading && handleFileSelect(file)}
@@ -392,12 +399,12 @@ export const Sidebar = React.forwardRef<
                         ) : (
                           <span
                             className={cn(
-                              "truncate text-xs",
+                              "truncate text-xs transition-opacity duration-200",
                               isFileLoading && "text-muted-foreground"
                             )}
                           >
                             {isFileLoading ? (
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 transition-opacity duration-200">
                                 <Spinner size="sm" />
                                 {getDisplayName(file.name)}
                               </div>

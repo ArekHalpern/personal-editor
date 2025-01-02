@@ -6,11 +6,27 @@ interface FooterProps {
   lastSaved: Date | null;
   saving: boolean;
   createdAt?: Date;
+  isRightBarCollapsed?: boolean;
+  rightBarWidth?: number;
 }
 
-export function Footer({ lastSaved, saving, createdAt }: FooterProps) {
+export function Footer({
+  lastSaved,
+  saving,
+  createdAt,
+  isRightBarCollapsed = false,
+  rightBarWidth = 400,
+}: FooterProps) {
+  const rightOffset = isRightBarCollapsed ? "3.5rem" : `${rightBarWidth}px`;
+
   return (
-    <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between px-4 py-2 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <div
+      className="fixed bottom-0 flex items-center justify-between px-4 py-2 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+      style={{
+        left: "180px",
+        right: rightOffset,
+      }}
+    >
       <div
         className={cn(
           "text-xs transition-opacity duration-200",

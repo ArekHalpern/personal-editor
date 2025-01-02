@@ -2,6 +2,7 @@ import StarterKit from "@tiptap/starter-kit";
 import BubbleMenuExtension from "@tiptap/extension-bubble-menu";
 import Placeholder from "@tiptap/extension-placeholder";
 import { PLACEHOLDER_TEXT } from "../constants";
+import { LineTracker } from "../extensions/lineTracker";
 
 // Types
 export interface EnhancementHistoryItem {
@@ -21,17 +22,37 @@ export interface EditorNode {
   text?: string;
 }
 
+export interface LineMetadata {
+  id: string;
+  number: number;
+  content: string;
+  type: 'paragraph' | 'heading1' | 'heading2' | 'list-item';
+  timestamp: Date;
+  lastModified?: Date;
+  aiEnhanced?: boolean;
+  aiMetadata?: {
+    lastEnhanced?: Date;
+    enhancementPrompt?: string;
+    originalContent?: string;
+  };
+}
+
+export interface EditorLineState {
+  lines: Map<number, LineMetadata>;
+  lastLineNumber: number;
+}
+
 // Editor Configuration
 export const editorConfig = {
   extensions: [
     StarterKit.configure({
       heading: {
-        levels: [1, 2],
+        levels: [2],
       },
     }),
     BubbleMenuExtension.configure({
-      shouldShow: ({ editor }) => {
-        return editor.isEditable && !editor.state.selection.empty;
+      shouldShow: ({ editor, state }) => {
+        return editor.isEditable && !state.selection.empty;
       },
       tippyOptions: {
         duration: 200,
@@ -39,20 +60,21 @@ export const editorConfig = {
       },
     }),
     Placeholder.configure({
-      placeholder: ({ node }) => {
-        if (node.type.name === "heading") {
-          return PLACEHOLDER_TEXT.title;
-        }
+      placeholder: () => {
         return PLACEHOLDER_TEXT.content;
       },
       showOnlyWhenEditable: true,
       showOnlyCurrent: true,
+      includeChildren: true,
+      emptyEditorClass: 'is-editor-empty',
+      emptyNodeClass: 'is-empty',
     }),
+    LineTracker,
   ],
   editorProps: {
     attributes: {
       class:
-        "prose prose-sm sm:prose-base lg:prose-lg prose-stone dark:prose-invert focus:outline-none p-4 h-full",
+        "prose prose-sm prose-stone dark:prose-invert focus:outline-none h-full",
     },
     handleDOMEvents: {
       blur: () => {
@@ -63,11 +85,8 @@ export const editorConfig = {
 };
 
 // Editor Utilities
-export const getFirstHeadingText = (content: EditorNode[]): string | null => {
-  const heading = content.find(
-    (node) => node.type === "heading" && node.attrs?.level === 1
-  );
-  return heading?.content?.[0]?.text?.trim() || null;
+export const getFirstHeadingText = (): string | null => {
+  return null;
 };
 
 export const isEmptyDocument = (content: EditorNode[]): boolean => {

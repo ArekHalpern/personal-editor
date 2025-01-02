@@ -23,6 +23,7 @@ import {
   safeRename,
 } from "./lib/utils/filesystem/fileUtils";
 import { getFileName } from "./lib/utils/string";
+import { Header } from "./components/Header";
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -357,18 +358,44 @@ function App() {
           <div className="relative h-full">
             {hasFiles ? (
               <>
+                <Header
+                  editor={editor}
+                  currentFile={currentFile}
+                  onTitleChange={(title) => {
+                    // Generate new filename from title
+                    const newFileName = getFileName(title);
+                    if (newFileName !== currentFile) {
+                      const oldPath = `${DEFAULT_PATH}/${currentFile}`;
+                      const newPath = `${DEFAULT_PATH}/${newFileName}`;
+                      safeRename({
+                        oldPath,
+                        newPath,
+                        content: editor.getHTML(),
+                        onRename: (fileName) => {
+                          setCurrentFile(fileName);
+                          debouncedSaveRef.current(
+                            fileName,
+                            editor.getHTML(),
+                            true
+                          );
+                        },
+                      });
+                    }
+                  }}
+                />
                 <BubbleMenu editor={editor} onEnhance={handleEnhance} />
-                <div className="h-full pb-10">
-                  <EditorContent
-                    editor={editor}
-                    className="h-full overflow-y-auto"
-                  />
-                  <Footer
-                    lastSaved={lastSaved}
-                    saving={isSaving}
-                    createdAt={createdAt || undefined}
-                  />
+                <div className="h-[calc(100%-6rem)] overflow-y-auto">
+                  <div className="min-h-full pb-16">
+                    <EditorContent editor={editor} className="h-full" />
+                  </div>
                 </div>
+                <Footer
+                  lastSaved={lastSaved}
+                  saving={isSaving}
+                  createdAt={createdAt || undefined}
+                  isRightBarCollapsed={isRightBarCollapsed}
+                  rightBarWidth={400}
+                />
               </>
             ) : (
               <EmptyState onCreateFile={handleCreateNewFile} />

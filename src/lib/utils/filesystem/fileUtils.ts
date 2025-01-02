@@ -29,13 +29,20 @@ export const generateUntitledName = async (): Promise<string> => {
   const baseNamePattern = /^Untitled(?:-(\d+))?\.html$/i;
   const nextNum = await findNextAvailableNumber(baseNamePattern);
   
-  // If it's the first file, just return "Untitled.html"
-  if (nextNum === 1) {
-    return "Untitled.html";
+  // If there's already an "Untitled.html", start numbering from 01
+  const files = await readDir(DEFAULT_PATH, {
+    baseDir: BaseDirectory.AppData,
+  });
+  
+  const hasUntitled = files.some(file => 
+    file.name?.toLowerCase() === "untitled.html"
+  );
+
+  if (hasUntitled || nextNum > 0) {
+    return `Untitled-${String(nextNum).padStart(2, "0")}.html`;
   }
   
-  // Otherwise, add the number with padding
-  return `Untitled-${String(nextNum).padStart(2, "0")}.html`;
+  return "Untitled.html";
 };
 
 export const generateNumberedFileName = async (baseName: string): Promise<string> => {

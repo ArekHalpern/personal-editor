@@ -1,7 +1,16 @@
 import { BubbleMenu as TiptapBubbleMenu, Editor } from "@tiptap/react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Bold, Italic, Heading2, List, Code, Sparkles, X } from "lucide-react";
+import {
+  Bold,
+  Italic,
+  Heading1,
+  Heading2,
+  List,
+  Code,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
 interface BubbleMenuProps {
@@ -15,6 +24,11 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
   const [prompt, setPrompt] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const selectionRef = useRef<{ from: number; to: number } | null>(null);
+
+  // Add function to check if selection is within H1
+  const isWithinH1 = () => {
+    return editor.isActive("heading", { level: 1 });
+  };
 
   // Store selection when showing prompt
   const handleShowPrompt = () => {
@@ -140,69 +154,101 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
       editor={editor}
       tippyOptions={{
         duration: 100,
-        placement: "top",
+        placement: "bottom",
         offset: [0, 10],
       }}
-      className="flex overflow-visible rounded-lg border bg-background shadow-md"
+      className="flex flex-col overflow-visible rounded-lg border bg-background shadow-md"
     >
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        className={editor.isActive("bold") ? "bg-accent" : ""}
-      >
-        <Bold className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        className={editor.isActive("italic") ? "bg-accent" : ""}
-      >
-        <Italic className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        className={editor.isActive("heading", { level: 2 }) ? "bg-accent" : ""}
-      >
-        <Heading2 className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => editor.chain().focus().toggleBulletList().run()}
-        className={editor.isActive("bulletList") ? "bg-accent" : ""}
-      >
-        <List className="h-4 w-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => editor.chain().focus().toggleCode().run()}
-        className={editor.isActive("code") ? "bg-accent" : ""}
-      >
-        <Code className="h-4 w-4" />
-      </Button>
-      {showPrompt ? (
-        <>
-          <div className="flex items-center px-1 bg-background relative z-10">
-            <Input
-              ref={inputRef}
-              className="h-7 w-[200px] text-xs bg-background"
-              placeholder="How should I enhance this?"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              onFocus={handleInputFocus}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && prompt && !isEnhancing) {
-                  handleQuickEnhance(prompt);
-                }
-              }}
-              autoFocus
-            />
-          </div>
+      <div className="flex">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          className={editor.isActive("bold") ? "bg-accent" : ""}
+          disabled={isWithinH1()}
+        >
+          <Bold className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          className={editor.isActive("italic") ? "bg-accent" : ""}
+          disabled={isWithinH1()}
+        >
+          <Italic className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 1 }).run()
+          }
+          className={
+            editor.isActive("heading", { level: 1 }) ? "bg-accent" : ""
+          }
+        >
+          <Heading1 className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() =>
+            editor.chain().focus().toggleHeading({ level: 2 }).run()
+          }
+          className={
+            editor.isActive("heading", { level: 2 }) ? "bg-accent" : ""
+          }
+          disabled={isWithinH1()}
+        >
+          <Heading2 className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          className={editor.isActive("bulletList") ? "bg-accent" : ""}
+          disabled={isWithinH1()}
+        >
+          <List className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => editor.chain().focus().toggleCode().run()}
+          className={editor.isActive("code") ? "bg-accent" : ""}
+          disabled={isWithinH1()}
+        >
+          <Code className="h-4 w-4" />
+        </Button>
+        {!showPrompt && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleShowPrompt}
+            className="gap-1"
+            disabled={isWithinH1()}
+          >
+            <Sparkles className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+      {showPrompt && (
+        <div className="flex items-center p-1 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <Input
+            ref={inputRef}
+            className="h-7 text-xs bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0"
+            placeholder="How should I enhance this?"
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            onFocus={handleInputFocus}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && prompt && !isEnhancing) {
+                handleQuickEnhance(prompt);
+              }
+            }}
+            autoFocus
+          />
           <Button
             variant="ghost"
             size="sm"
@@ -210,7 +256,7 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
             onClick={() => {
               if (prompt) handleQuickEnhance(prompt);
             }}
-            className="px-2 bg-background relative z-10"
+            className="px-2"
           >
             <Sparkles className="h-4 w-4" />
             {isEnhancing ? "..." : ""}
@@ -219,20 +265,11 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
             variant="ghost"
             size="sm"
             onClick={clearSelection}
-            className="px-2 bg-background relative z-10"
+            className="px-2"
           >
             <X className="h-4 w-4" />
           </Button>
-        </>
-      ) : (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleShowPrompt}
-          className="gap-1"
-        >
-          <Sparkles className="h-4 w-4" />
-        </Button>
+        </div>
       )}
     </TiptapBubbleMenu>
   );

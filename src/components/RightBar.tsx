@@ -36,97 +36,46 @@ export function RightBar({
   enhancementHistory,
   onEnhance,
 }: RightBarProps) {
-  const [width, setWidth] = React.useState(400);
-  const [isEnhancing, setIsEnhancing] = React.useState(false);
   const [prompt, setPrompt] = React.useState("");
-
-  const handleResize = (delta: number) => {
-    const newWidth = Math.max(200, Math.min(640, width - delta));
-    setWidth(newWidth);
-  };
+  const [isEnhancing, setIsEnhancing] = React.useState(false);
 
   const handleEnhance = async () => {
-    if (!editor) return;
-
-    const hasSelection = editor.state.selection.content().size > 0;
-    const fullContent = editor.getHTML();
-
-    const selectedText = hasSelection
-      ? editor.state.doc.textBetween(
-          editor.state.selection.from,
-          editor.state.selection.to,
-          " "
-        )
-      : fullContent;
+    if (!prompt || isEnhancing) return;
 
     setIsEnhancing(true);
-
     try {
-      const response = await fetch("http://localhost:3001/enhance", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          selectedText,
-          fullContent,
-          prompt,
-        }),
-      });
+      const selection = editor.state.selection;
+      const from = selection.from;
+      const to = selection.to;
+      const text = editor.state.doc.textBetween(from, to);
 
-      if (!response.ok) throw new Error("Enhancement failed");
+      if (!text) return;
 
-      const { enhancedText } = await response.json();
+      // Add your enhancement logic here
+      const enhanced = text; // Placeholder for actual enhancement
+      onEnhance(text, enhanced, prompt);
 
-      if (hasSelection) {
-        editor
-          .chain()
-          .focus()
-          .setTextSelection(editor.state.selection)
-          .insertContent(enhancedText)
-          .run();
-      } else {
-        editor.commands.setContent(enhancedText);
-      }
-
-      onEnhance(selectedText, enhancedText, prompt);
+      // Clear the prompt after successful enhancement
       setPrompt("");
     } catch (error) {
-      console.error("Error enhancing text:", error);
+      console.error("Error during enhancement:", error);
     } finally {
       setIsEnhancing(false);
     }
-  };
-
-  const stripHtmlTags = (html: string) => {
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    return doc.body.textContent?.replace(/\n\s*\n/g, "\n") || "";
-  };
-
-  const formatText = (text: string, maxLength: number = 150) => {
-    if (text.length <= maxLength) return text;
-    const truncated = text.slice(0, maxLength);
-    const lastLineBreak = truncated.lastIndexOf("\n");
-    if (lastLineBreak > maxLength * 0.8) {
-      return truncated.slice(0, lastLineBreak) + "...";
-    }
-    return truncated + "...";
   };
 
   return (
     <div
       className={cn(
         "group relative flex flex-col border-l bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
-        isCollapsed ? "w-14" : "",
+        isCollapsed ? "w-14" : "w-[400px]",
         className
       )}
-      style={!isCollapsed ? { width: `${width}px` } : undefined}
     >
-      {!isCollapsed && (
-        <ResizeHandle className="left-0 right-auto" onResize={handleResize} />
-      )}
-
-      <div className="flex justify-end border-b px-2 py-1">
+      <div className="flex items-center justify-between p-2 border-b">
+        {!isCollapsed && (
+          <span className="text-xs font-medium px-2">Assistant</span>
+        )}
         <Button
           variant="ghost"
           size="sm"
@@ -140,7 +89,6 @@ export function RightBar({
           )}
         </Button>
       </div>
-
       {!isCollapsed ? (
         <div className="flex-1 overflow-hidden">
           <Tabs defaultValue="enhance" className="h-full">
@@ -192,57 +140,32 @@ export function RightBar({
               </div>
             </TabsContent>
 
-            <TabsContent
-              value="history"
-              className="p-4 mt-0 h-[calc(100%-3rem)]"
-            >
-              <ScrollArea className="h-full pr-4">
+            <TabsContent value="history" className="p-4 mt-0">
+              <ScrollArea className="h-[calc(100vh-10rem)]">
                 <div className="space-y-4">
                   {enhancementHistory.map((item, index) => (
-                    <div
-                      key={index}
-                      className="p-3 rounded-lg border bg-card text-card-foreground text-sm space-y-2"
-                    >
+                    <div key={index} className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <div className="text-xs text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {item.timestamp.toLocaleTimeString()}
-                        </div>
-                        {stripHtmlTags(item.original) ===
-                          stripHtmlTags(item.enhanced) && (
-                          <div className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded">
-                            Full Document
-                          </div>
-                        )}
+                        </span>
                       </div>
-                      <div className="space-y-1.5">
-                        <div className="text-xs font-medium text-muted-foreground">
-                          Prompt:
+                      <div className="text-xs space-y-2">
+                        <div className="space-y-1">
+                          <div className="text-muted-foreground">Original:</div>
+                          <div className="pl-2 border-l-2">{item.original}</div>
                         </div>
-                        <div className="pl-2 border-l-2 border-muted">
-                          {item.prompt}
+                        <div className="space-y-1">
+                          <div className="text-muted-foreground">Enhanced:</div>
+                          <div className="pl-2 border-l-2">{item.enhanced}</div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-muted-foreground">Prompt:</div>
+                          <div className="pl-2 border-l-2 text-muted-foreground">
+                            {item.prompt}
+                          </div>
                         </div>
                       </div>
-                      {stripHtmlTags(item.original) !==
-                        stripHtmlTags(item.enhanced) && (
-                        <div className="space-y-3">
-                          <div className="space-y-1">
-                            <div className="text-xs font-medium text-muted-foreground">
-                              Original:
-                            </div>
-                            <div className="pl-2 border-l-2 border-muted text-muted-foreground line-through whitespace-pre-line">
-                              {formatText(stripHtmlTags(item.original))}
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            <div className="text-xs font-medium text-muted-foreground">
-                              Enhanced:
-                            </div>
-                            <div className="pl-2 border-l-2 border-muted whitespace-pre-line">
-                              {formatText(stripHtmlTags(item.enhanced))}
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -250,9 +173,7 @@ export function RightBar({
             </TabsContent>
           </Tabs>
         </div>
-      ) : (
-        <div className="flex-1" />
-      )}
+      ) : null}
     </div>
   );
 }

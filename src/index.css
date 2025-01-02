@@ -132,19 +132,19 @@
 @layer components {
   /* Editor Styles */
   .ProseMirror {
-    @apply min-h-full outline-none leading-normal;
+    @apply min-h-full outline-none leading-tight;
+    padding: 1rem 1rem !important;
+    padding-left: 3.5rem !important;
   }
 
   .ProseMirror p {
-    @apply my-1;
+    @apply my-0;
+    line-height: 1.2;
   }
 
-  .ProseMirror h1 {
-    @apply text-4xl font-bold mb-2 mt-4;
-  }
-
-  .ProseMirror h2 {
-    @apply text-2xl font-semibold mb-2 mt-3;
+  /* Heading styles */
+  .ProseMirror > h2 {
+    @apply text-lg font-semibold mb-2 mt-3;
   }
 
   /* Enhancement Selection */
@@ -158,40 +158,69 @@
     @apply relative;
   }
 
-  /* Placeholder styles */
-  .tiptap p.is-editor-empty:first-child::before,
-  .tiptap h1.is-empty::before {
-    @apply text-muted-foreground float-left opacity-40 italic;
-    content: attr(data-placeholder);
-    height: 0;
+  /* Line Numbers with Metadata */
+  .ProseMirror {
+    counter-reset: line;
+    position: relative;
+  }
+
+  /* Create a separate layer for line numbers */
+  .ProseMirror::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 3.5rem;
+    background: var(--background);
+    z-index: 2;
     pointer-events: none;
   }
 
-  /* Additional placeholder styles for better visibility */
-  .ProseMirror p.is-empty::before {
-    @apply text-muted-foreground float-left opacity-40 italic;
-    content: attr(data-placeholder);
-    height: 0;
-    pointer-events: none;
+  /* Line number styles */
+  .ProseMirror > * {
+    position: relative;
+    counter-increment: line;
+    min-height: 1.2em;
+    padding: 0.05em 0;
   }
 
-  .ProseMirror h1.is-empty::before {
-    @apply text-muted-foreground float-left opacity-40 italic;
-    content: attr(data-placeholder);
-    height: 0;
+  .ProseMirror > *::before {
+    content: counter(line);
+    display: inline-block;
+    position: absolute;
+    left: -3.5rem;
+    width: 2rem;
+    text-align: right;
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+    padding-right: 0.5rem;
+    opacity: 0.5;
+    user-select: none;
     pointer-events: none;
+    line-height: inherit;
+    top: 0.25em;
+    z-index: 3;
   }
 
-  /* Ensure placeholders are visible in all themes */
-  .dark .ProseMirror p.is-empty::before,
-  .dark .ProseMirror h1.is-empty::before,
-  .modern .ProseMirror p.is-empty::before,
-  .modern .ProseMirror h1.is-empty::before,
-  .dusk .ProseMirror p.is-empty::before,
-  .dusk .ProseMirror h1.is-empty::before,
-  .ocean .ProseMirror p.is-empty::before,
-  .ocean .ProseMirror h1.is-empty::before {
-    @apply text-muted-foreground opacity-40;
+  /* Ensure content is in its own layer */
+  .prose {
+    @apply max-w-none;
+    position: relative;
+    isolation: isolate;
+  }
+
+  .prose p {
+    @apply my-0 !important;
+    line-height: 1.2 !important;
+  }
+
+  .prose > :first-child {
+    @apply mt-0 !important;
+  }
+
+  .prose > :last-child {
+    @apply mb-0 !important;
   }
 
   /* Theme-specific styles */
@@ -223,23 +252,6 @@
   /* Transitions */
   .sidebar-transition {
     @apply transition-all duration-300 ease-in-out;
-  }
-
-  /* Prose Overrides */
-  .prose {
-    @apply max-w-none;
-  }
-
-  .prose p {
-    @apply my-1 !important;
-  }
-
-  .prose > :first-child {
-    @apply mt-0 !important;
-  }
-
-  .prose > :last-child {
-    @apply mb-0 !important;
   }
 }
  
