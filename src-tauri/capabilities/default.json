@@ -1,0 +1,27 @@
+{
+  "identifier": "default-capability",
+  "description": "Default capabilities for the application",
+  "local": true,
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:path:default",
+    "fs:default",
+    "fs:allow-create",
+    "fs:allow-read-file",
+    "fs:allow-write-file",
+    "fs:allow-read-dir",
+    "fs:allow-mkdir",
+    "fs:allow-remove",
+    "fs:allow-document-write",
+    "fs:allow-document-write-recursive",
+    "fs:scope-document-recursive",
+    "dialog:default",
+    "dialog:allow-ask",
+    "dialog:allow-confirm",
+    "dialog:allow-message",
+    "dialog:allow-open",
+    "dialog:allow-save"
+  ],
+  "platforms": ["macOS"]
+}
