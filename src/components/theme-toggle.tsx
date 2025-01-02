@@ -1,5 +1,5 @@
 import { useTheme } from "./theme-provider";
-import { cn } from "../lib/utils";
+import { cn } from "../lib/utils/cn";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();

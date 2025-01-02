@@ -9,10 +9,13 @@ import "./index.css";
 import { SaveIndicator } from "./components/SaveIndicator";
 import { debounce } from "lodash";
 import { EmptyState } from "./components/EmptyState";
-import { createNewFile } from "./lib/utils/createNewFile";
+import { createNewFile } from "./lib/utils/filesystem/createNewFile";
 import { DEFAULT_PATH, AUTO_SAVE_DELAY } from "./lib/constants";
-import { editorConfig } from "./lib/editor";
-import { EnhancementHistoryItem } from "./lib/types";
+import { editorConfig, EnhancementHistoryItem } from "./lib/types/editor";
+import {
+  generateNumberedFileName,
+  safeRename,
+} from "./lib/utils/filesystem/fileUtils";
 
 function App() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -28,51 +31,57 @@ function App() {
 
   // Create debounced save function with useRef to maintain reference
   const debouncedSaveRef = useRef(
-    debounce(async (filePath: string, content: string) => {
-      if (!filePath) return;
+    debounce(
+      async (filePath: string, content: string, isRename: boolean = false) => {
+        if (!filePath) return;
 
-      try {
-        setIsSaving(true);
+        try {
+          setIsSaving(true);
 
-        // Create directory if it doesn't exist
-        await mkdir(DEFAULT_PATH, {
-          recursive: true,
-          baseDir: BaseDirectory.AppData,
-        });
+          // Create directory if it doesn't exist
+          await mkdir(DEFAULT_PATH, {
+            recursive: true,
+            baseDir: BaseDirectory.AppData,
+          });
 
-        // Ensure file path is properly formatted
-        const fileName = filePath.includes("/")
-          ? filePath.split("/").pop()!
-          : filePath;
-        const fullPath = `${DEFAULT_PATH}/${fileName}`;
+          // Ensure file path is properly formatted
+          const fileName = filePath.includes("/")
+            ? filePath.split("/").pop()!
+            : filePath;
+          const fullPath = `${DEFAULT_PATH}/${fileName}`;
 
-        console.log("Saving file:", {
-          fileName,
-          fullPath,
-          baseDir: "AppData",
-          contentLength: content.length,
-        });
+          console.log("Saving file:", {
+            fileName,
+            fullPath,
+            baseDir: "AppData",
+            contentLength: content.length,
+            isRename,
+          });
 
-        // Write the file
-        await writeTextFile(fullPath, content, {
-          baseDir: BaseDirectory.AppData,
-        });
+          // Write the file
+          await writeTextFile(fullPath, content, {
+            baseDir: BaseDirectory.AppData,
+          });
 
-        setLastSaved(new Date());
-        console.log("File saved successfully:", fileName);
+          setLastSaved(new Date());
+          console.log("File saved successfully:", fileName);
 
-        // Refresh the sidebar to show any new files
-        await sidebarRef.current?.loadFiles();
-      } catch (error) {
-        console.error("Error saving file:", {
-          error,
-          filePath,
-          fullPath: `${DEFAULT_PATH}/${filePath}`,
-        });
-      } finally {
-        setIsSaving(false);
-      }
-    }, AUTO_SAVE_DELAY)
+          // Only refresh sidebar if this was a rename operation
+          if (isRename) {
+            await sidebarRef.current?.loadFiles();
+          }
+        } catch (error) {
+          console.error("Error saving file:", {
+            error,
+            filePath,
+            fullPath: `${DEFAULT_PATH}/${filePath}`,
+          });
+        } finally {
+          setIsSaving(false);
+        }
+      },
+      AUTO_SAVE_DELAY
+    )
   );
 
   // Initialize the editor
@@ -104,15 +113,86 @@ function App() {
   useEffect(() => {
     if (!editor) return;
 
-    const handleUpdate = () => {
-      if (!hasFiles || !currentFile) return; // Don't save if there are no files or no current file
+    const handleUpdate = async () => {
+      if (!hasFiles || !currentFile) return;
+
+      // Get the first heading content
+      const heading = editor
+        .getJSON()
+        .content?.find(
+          (node) => node.type === "heading" && node.attrs?.level === 1
+        );
+
+      if (heading?.content?.[0]?.text) {
+        const headerText = heading.content[0].text.trim();
+        if (headerText) {
+          // Generate new filename from header text
+          const sanitizedHeader = headerText
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "");
+          const newFileName = `${sanitizedHeader}.html`;
+
+          if (newFileName !== currentFile) {
+            const oldPath = `${DEFAULT_PATH}/${currentFile}`;
+            const newPath = `${DEFAULT_PATH}/${newFileName}`;
+
+            try {
+              // Cancel any pending saves
+              debouncedSaveRef.current.cancel();
+
+              // Try to rename the file
+              const result = await safeRename({
+                oldPath,
+                newPath,
+                content: editor.getHTML(),
+                onRename: (fileName) => {
+                  setCurrentFile(fileName);
+                  debouncedSaveRef.current(fileName, editor.getHTML(), true);
+                },
+              });
+
+              if (!result.success && result.reason === "file_exists") {
+                // If file exists, generate a numbered filename
+                const newFileNameWithNumber = await generateNumberedFileName(
+                  sanitizedHeader
+                );
+                const newPathWithNumber = `${DEFAULT_PATH}/${newFileNameWithNumber}`;
+
+                await safeRename({
+                  oldPath,
+                  newPath: newPathWithNumber,
+                  content: editor.getHTML(),
+                  onRename: (fileName) => {
+                    setCurrentFile(fileName);
+                    debouncedSaveRef.current(fileName, editor.getHTML(), true);
+                  },
+                });
+              }
+
+              return;
+            } catch (error) {
+              console.error("Error during rename:", error);
+            }
+          }
+        }
+      }
+
+      // If we didn't do a rename, just do a normal save
       debouncedSaveRef.current(currentFile, editor.getHTML());
     };
 
-    editor.on("update", handleUpdate);
+    let updateTimeout: NodeJS.Timeout;
+    const debouncedUpdate = () => {
+      clearTimeout(updateTimeout);
+      updateTimeout = setTimeout(handleUpdate, 500);
+    };
+
+    editor.on("update", debouncedUpdate);
 
     return () => {
-      editor.off("update", handleUpdate);
+      clearTimeout(updateTimeout);
+      editor.off("update", debouncedUpdate);
     };
   }, [editor, currentFile, hasFiles]);
 

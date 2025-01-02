@@ -9,7 +9,7 @@ import {
   History,
   CornerDownLeft,
 } from "lucide-react";
-import { cn } from "../lib/utils";
+import { cn } from "../lib/utils/cn";
 import { Editor } from "@tiptap/react";
 import { ResizeHandle } from "./ui/resize-handle";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";

@@ -1,7 +1,7 @@
 OSTRACA - AI TEXT EDITOR
 
 Product Requirements Document (PRD)
-This PRD outlines the requirements and specifications for a minimal, modern HTML/JSON text editor desktop application built with Tauri. It uses shadcn components for a sleek UI, Tiptap for rich text editing, and allows users to save files locally as a single HTML/JSON file.
+This PRD outlines the requirements and specifications for a minimal, modern HTML text editor desktop application built with Tauri. It uses shadcn components for a sleek UI, Tiptap for rich text editing, and allows users to save files locally as a single HTML file.
 
 Implementation Status:
 ✅ = Implemented
@@ -11,7 +11,7 @@ Implementation Status:
 ---
 
 1. Overview
-   Application Name: HTML/JSON AI Editor
+   Application Name: HTML AI Editor
    Platform: Mac desktop (Tauri-based, but can also run cross-platform)
    Tech Stack:
    ✅ Tauri (Rust + TypeScript bindings)
@@ -20,7 +20,7 @@ Implementation Status:
    ✅ shadcn UI components
    ⏳ OpenAI (or similar) for AI-based enhancements
 
-   The goal is to deliver a modern, minimal design text editor that seamlessly edits and previews HTML/JSON content, uses AI features for suggested improvements, and keeps everything in a single local file if the user chooses.
+   The goal is to deliver a modern, minimal design text editor that seamlessly edits and previews HTML content, uses AI features for suggested improvements, and keeps everything in a single local file if the user chooses.
 
 ---
 
@@ -28,10 +28,10 @@ Implementation Status:
    ✅ Minimal & Modern Design
    ✅ Use shadcn components for a polished, cohesive look and feel
    ✅ Keep UI simple, focusing on the editor and preview
-   ✅ All user content is stored in a single HTML/JSON file
+   ✅ All user content is stored in a single HTML file
    🚧 Users can load and save changes locally
-   ✅ Rich-Text Editing with HTML/JSON
-   ✅ Use Tiptap to provide formatting controls that map to HTML/JSON syntax
+   ✅ Rich-Text Editing with HTML
+   ✅ Use Tiptap to provide formatting controls that map to HTML syntax
    ⏳ Provide inline preview
    ⏳ AI Integration
    ⏳ Convert and save to Markdown/PDF/docx
@@ -45,7 +45,7 @@ Implementation Status:
 
    3.2 Editor & Preview
    ✅ Tiptap Editor
-   ✅ Rich text editing, but behind the scenes it's HTML/JSON
+   ✅ Rich text editing, but behind the scenes it's HTML
    ✅ Tiptap's extension architecture to provide strong formatting options
    ⏳ Live Preview
 
@@ -130,7 +130,7 @@ Implementation Status:
 
 6. Architecture Overview
    ✅ Frontend (React + Tiptap)
-   🚧 HTML/JSON Processing
+   🚧 HTML Processing
    🚧 Tauri APIs
    ⏳ AI Service
 
@@ -146,7 +146,7 @@ Implementation Status:
    Validate reading/writing .md files.
    M3: Editor & Preview (1 Week)
    Create or enable a live preview panel.
-   Ensure Tiptap's internal representation converts to HTML/JSON and vice versa.
+   Ensure Tiptap's internal representation converts to HTML and vice versa.
    M4: AI Integration (2 Weeks)
    Integrate AI call with a simple "Enhance with AI" button.
    Provide user with newly generated text.
@@ -166,7 +166,7 @@ Implementation Status:
    Additional Tiptap extensions for embedding images, tables, etc.
    Version Control
    Integration with Git for version history.
-   HTML/JSON Linting
+   HTML Linting
    Automated linting suggestions for better structure.
 
 ---
@@ -187,4 +187,4 @@ Implementation Status:
 ---
 
 Conclusion
-This PRD describes a minimal, modern HTML/JSON editor built with Tauri, shadcn for UI, and Tiptap for rich-text editing. The focus is on a clean interface, robust file handling, optional AI enhancements, and a single-file approach for content management. Following this plan ensures a concise, intuitive desktop application that retains future flexibility for advanced features.
+This PRD describes a minimal, modern HTML editor built with Tauri, shadcn for UI, and Tiptap for rich-text editing. The focus is on a clean interface, robust file handling, optional AI enhancements, and a single-file approach for content management. Following this plan ensures a concise, intuitive desktop application that retains future flexibility for advanced features.

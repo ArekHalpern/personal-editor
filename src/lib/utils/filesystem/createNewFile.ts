@@ -1,13 +1,7 @@
 import { writeTextFile, mkdir, BaseDirectory } from "@tauri-apps/plugin-fs";
-import { generateFileName } from "./generateFileName";
-
-const DEFAULT_PATH = "ai-editor-files";
-
-interface CreateNewFileOptions {
-  onSuccess?: (content: string, fileName: string) => void;
-  onError?: (error: unknown) => void;
-  onLoadFiles?: () => Promise<void>;
-}
+import { DEFAULT_PATH } from "../../constants";
+import { generateUntitledName } from "./fileUtils";
+import { CreateNewFileOptions } from "../../types/file";
 
 export const createNewFile = async (options: CreateNewFileOptions = {}) => {
   const { onSuccess, onError, onLoadFiles } = options;
@@ -19,7 +13,7 @@ export const createNewFile = async (options: CreateNewFileOptions = {}) => {
       baseDir: BaseDirectory.AppData,
     });
 
-    const fileName = generateFileName();
+    const fileName = await generateUntitledName();
     // Empty elements to allow placeholder text to show
     const initialContent = "<h1></h1><p></p>";
 

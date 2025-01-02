@@ -11,8 +11,8 @@ import {
   Trash2,
   Pencil,
 } from "lucide-react";
-import { cn } from "../lib/utils";
-import { createNewFile } from "../lib/utils/createNewFile";
+import { cn } from "../lib/utils/cn";
+import { createNewFile } from "../lib/utils/filesystem/createNewFile";
 import { ResizeHandle } from "./ui/resize-handle";
 import {
   readDir,
@@ -25,7 +25,7 @@ import {
 } from "@tauri-apps/plugin-fs";
 import { ask } from "@tauri-apps/plugin-dialog";
 import { DEFAULT_PATH } from "../lib/constants";
-import { FileItem } from "../lib/types";
+import { FileItem } from "../lib/types/file";
 
 interface SidebarProps {
   className?: string;
