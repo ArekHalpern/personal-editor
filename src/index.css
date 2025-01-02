@@ -25,7 +25,7 @@
     --ring: 20 14.3% 4.1%;
     --radius: 0.5rem;
   }
- 
+
   .dark {
     --background: 20 14.3% 4.1%;
     --foreground: 60 9.1% 97.8%;
@@ -47,6 +47,7 @@
     --input: 12 6.5% 15.1%;
     --ring: 24 5.7% 82.9%;
   }
+
   .modern {
     --background: 37, 74%, 67%;
     --foreground: 240 10% 3.9%;
@@ -73,70 +74,172 @@
     --chart-4: 157 91% 60%;
     --chart-5: 277 91% 60%;
   }
-}
- 
-@layer base {
+
+  .dusk {
+    --background: 235 25% 15%;
+    --foreground: 220 40% 98%;
+    --card: 235 25% 17%;
+    --card-foreground: 220 40% 98%;
+    --popover: 235 25% 17%;
+    --popover-foreground: 220 40% 98%;
+    --primary: 263 50% 75%;
+    --primary-foreground: 235 25% 15%;
+    --secondary: 235 25% 20%;
+    --secondary-foreground: 220 40% 98%;
+    --muted: 235 25% 20%;
+    --muted-foreground: 220 40% 70%;
+    --accent: 263 50% 75%;
+    --accent-foreground: 235 25% 15%;
+    --destructive: 0 75% 50%;
+    --destructive-foreground: 220 40% 98%;
+    --border: 235 25% 25%;
+    --input: 235 25% 25%;
+    --ring: 263 50% 75%;
+  }
+
+  .ocean {
+    --background: 215 50% 12%;
+    --foreground: 45 100% 85%;
+    --card: 215 50% 15%;
+    --card-foreground: 45 100% 85%;
+    --popover: 215 50% 15%;
+    --popover-foreground: 45 100% 85%;
+    --primary: 200 100% 60%;
+    --primary-foreground: 215 50% 12%;
+    --secondary: 215 50% 18%;
+    --secondary-foreground: 45 100% 85%;
+    --muted: 215 50% 18%;
+    --muted-foreground: 45 100% 75%;
+    --accent: 215 50% 20%;
+    --accent-foreground: 45 100% 85%;
+    --destructive: 0 100% 65%;
+    --destructive-foreground: 215 50% 12%;
+    --border: 215 50% 22%;
+    --input: 215 50% 22%;
+    --ring: 200 100% 60%;
+  }
+
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-/* Editor Styles */
-.ProseMirror {
-  @apply min-h-full outline-none leading-normal;
-}
+@layer components {
+  /* Editor Styles */
+  .ProseMirror {
+    @apply min-h-full outline-none leading-normal;
+  }
 
-.ProseMirror p {
-  @apply my-1;
-}
+  .ProseMirror p {
+    @apply my-1;
+  }
 
-.ProseMirror h1 {
-  @apply text-4xl font-bold mb-2 mt-4;
-}
+  .ProseMirror h1 {
+    @apply text-4xl font-bold mb-2 mt-4;
+  }
 
-.ProseMirror h2 {
-  @apply text-2xl font-semibold mb-2 mt-3;
-}
+  .ProseMirror h2 {
+    @apply text-2xl font-semibold mb-2 mt-3;
+  }
 
-.tiptap {
-  @apply h-full;
-}
+  /* Enhancement Selection */
+  .ProseMirror.enhancing .ProseMirror-selectionparent::before {
+    @apply rounded-sm absolute pointer-events-none -z-10;
+    background-color: rgba(147, 51, 234, 0.2) !important;
+    content: '';
+  }
 
-/* Override Prose Styles */
-.prose {
-  @apply max-w-none;
-}
+  .ProseMirror.enhancing {
+    @apply relative;
+  }
 
-.prose p {
-  @apply my-1 !important;
-}
+  /* Placeholder styles */
+  .tiptap p.is-editor-empty:first-child::before,
+  .tiptap h1.is-empty::before {
+    @apply text-muted-foreground float-left opacity-40 italic;
+    content: attr(data-placeholder);
+    height: 0;
+    pointer-events: none;
+  }
 
-.prose > :first-child {
-  @apply mt-0 !important;
-}
+  /* Additional placeholder styles for better visibility */
+  .ProseMirror p.is-empty::before {
+    @apply text-muted-foreground float-left opacity-40 italic;
+    content: attr(data-placeholder);
+    height: 0;
+    pointer-events: none;
+  }
 
-.prose > :last-child {
-  @apply mb-0 !important;
-}
+  .ProseMirror h1.is-empty::before {
+    @apply text-muted-foreground float-left opacity-40 italic;
+    content: attr(data-placeholder);
+    height: 0;
+    pointer-events: none;
+  }
 
-/* Sidebar Styles */
-.sidebar-scroll::-webkit-scrollbar {
-  @apply w-2;
-}
+  /* Ensure placeholders are visible in all themes */
+  .dark .ProseMirror p.is-empty::before,
+  .dark .ProseMirror h1.is-empty::before,
+  .modern .ProseMirror p.is-empty::before,
+  .modern .ProseMirror h1.is-empty::before,
+  .dusk .ProseMirror p.is-empty::before,
+  .dusk .ProseMirror h1.is-empty::before,
+  .ocean .ProseMirror p.is-empty::before,
+  .ocean .ProseMirror h1.is-empty::before {
+    @apply text-muted-foreground opacity-40;
+  }
 
-.sidebar-scroll::-webkit-scrollbar-track {
-  @apply bg-transparent;
-}
+  /* Theme-specific styles */
+  .dusk .ProseMirror h1,
+  .dusk .ProseMirror h2,
+  .ocean .ProseMirror h1,
+  .ocean .ProseMirror h2,
+  .ocean .ProseMirror p {
+    @apply text-foreground;
+  }
 
-.sidebar-scroll::-webkit-scrollbar-thumb {
-  @apply bg-muted rounded-full;
-}
+  .ocean .hover\:bg-accent:hover {
+    @apply bg-[hsl(215,50%,16%)];
+  }
 
-/* Transitions */
-.sidebar-transition {
-  @apply transition-all duration-300 ease-in-out;
-} 
+  /* Sidebar Styles */
+  .sidebar-scroll::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  .sidebar-scroll::-webkit-scrollbar-thumb {
+    @apply bg-muted rounded-full;
+  }
+
+  /* Transitions */
+  .sidebar-transition {
+    @apply transition-all duration-300 ease-in-out;
+  }
+
+  /* Prose Overrides */
+  .prose {
+    @apply max-w-none;
+  }
+
+  .prose p {
+    @apply my-1 !important;
+  }
+
+  .prose > :first-child {
+    @apply mt-0 !important;
+  }
+
+  .prose > :last-child {
+    @apply mb-0 !important;
+  }
+}
+ 

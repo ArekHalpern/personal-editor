@@ -1,19 +1,56 @@
-import { Moon, Sun } from "lucide-react";
-import { Button } from "./ui/button";
 import { useTheme } from "./theme-provider";
+import { cn } from "../lib/utils";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
-      onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-    >
-      <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-      <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-      <span className="sr-only">Toggle theme</span>
-    </Button>
+    <div className="flex">
+      <button
+        onClick={() => setTheme("light")}
+        className={cn(
+          "w-4 h-4 transition-all",
+          "bg-white border border-border",
+          theme === "light" ? "ring-1 ring-primary/50" : ""
+        )}
+        aria-label="Light theme"
+      />
+      <button
+        onClick={() => setTheme("dark")}
+        className={cn(
+          "w-4 h-4 transition-all -ml-[1px]",
+          "bg-zinc-950 border border-border",
+          theme === "dark" ? "ring-1 ring-primary/50" : ""
+        )}
+        aria-label="Dark theme"
+      />
+      <button
+        onClick={() => setTheme("modern")}
+        className={cn(
+          "w-4 h-4 transition-all -ml-[1px]",
+          "bg-[hsl(37,74%,67%)] border border-border",
+          theme === "modern" ? "ring-1 ring-primary/50" : ""
+        )}
+        aria-label="Modern theme"
+      />
+      <button
+        onClick={() => setTheme("dusk")}
+        className={cn(
+          "w-4 h-4 transition-all -ml-[1px]",
+          "bg-[hsl(263,50%,45%)] border border-border",
+          theme === "dusk" ? "ring-1 ring-primary/50" : ""
+        )}
+        aria-label="Dusk theme"
+      />
+      <button
+        onClick={() => setTheme("ocean")}
+        className={cn(
+          "w-4 h-4 transition-all -ml-[1px]",
+          "bg-[hsl(215,70%,35%)] border border-border",
+          theme === "ocean" ? "ring-1 ring-primary/50" : ""
+        )}
+        aria-label="Ocean theme"
+      />
+    </div>
   );
 }

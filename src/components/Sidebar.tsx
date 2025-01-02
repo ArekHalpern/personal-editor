@@ -1,11 +1,10 @@
 import React from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "./ui/hover-card";
+import { ThemeToggle } from "./theme-toggle";
 import {
   PanelLeftClose,
   PanelLeft,
-  FileText,
   Search,
   Clock,
   FilePlus,
@@ -13,304 +12,311 @@ import {
   Pencil,
 } from "lucide-react";
 import { cn } from "../lib/utils";
+import { createNewFile } from "../lib/utils/createNewFile";
 import { ResizeHandle } from "./ui/resize-handle";
 import {
   readDir,
-  writeFile,
   remove,
-  readFile,
+  readTextFile,
   mkdir,
   exists,
   rename,
+  BaseDirectory,
 } from "@tauri-apps/plugin-fs";
-import { documentDir } from "@tauri-apps/api/path";
 import { ask } from "@tauri-apps/plugin-dialog";
+import { DEFAULT_PATH } from "../lib/constants";
+import { FileItem } from "../lib/types";
 
 interface SidebarProps {
   className?: string;
   isCollapsed: boolean;
   onToggle: () => void;
   onFileSelect: (content: string, filename?: string) => void;
+  onFilesLoaded: (files: FileItem[]) => void;
+  ref?: React.RefObject<{ loadFiles: () => Promise<void> }>;
+  activeFile?: string;
 }
 
-interface FileItem {
-  name: string;
-  path: string;
-  lastModified: Date;
-}
+export const Sidebar = React.forwardRef<
+  { loadFiles: () => Promise<void> },
+  SidebarProps
+>(
+  (
+    {
+      className,
+      isCollapsed,
+      onToggle,
+      onFileSelect,
+      onFilesLoaded,
+      activeFile,
+    },
+    ref
+  ) => {
+    const [recentFiles, setRecentFiles] = React.useState<FileItem[]>([]);
+    const [searchQuery, setSearchQuery] = React.useState("");
+    const [editingFile, setEditingFile] = React.useState<string | null>(null);
+    const [editingName, setEditingName] = React.useState("");
+    const [width, setWidth] = React.useState(180); // Start at minimum width
 
-const DEFAULT_PATH = "ai-editor-files";
-
-export function Sidebar({
-  className,
-  isCollapsed,
-  onToggle,
-  onFileSelect,
-}: SidebarProps) {
-  const [recentFiles, setRecentFiles] = React.useState<FileItem[]>([]);
-  const [searchQuery, setSearchQuery] = React.useState("");
-  const [editingFile, setEditingFile] = React.useState<string | null>(null);
-  const [editingName, setEditingName] = React.useState("");
-  const [width, setWidth] = React.useState(180); // Start at minimum width
-
-  const loadFiles = async () => {
-    try {
-      const docDir = await documentDir();
-      const fullPath = `${docDir}/${DEFAULT_PATH}`;
-
-      // Ensure directory exists
+    const loadFiles = async () => {
       try {
-        await mkdir(fullPath, { recursive: true });
-      } catch (error) {
-        if (
-          !(error instanceof Error) ||
-          !error.message.includes("File exists")
-        ) {
-          console.error("Error creating directory:", error);
-          return;
-        }
-      }
+        // Ensure directory exists
+        await mkdir(DEFAULT_PATH, {
+          recursive: true,
+          baseDir: BaseDirectory.AppData,
+        });
 
-      const files = await readDir(fullPath);
-      const fileItems: FileItem[] = files
-        .filter((file) => file.name !== null)
-        .map((file) => {
-          // Extract date from filename (assumes YYYY-MM-DD format)
-          const name = file.name!.replace(".html", "");
-          const dateParts = name.split("-");
-          if (dateParts.length >= 3) {
-            const [year, month, day, ...rest] = dateParts;
-            const displayDate = `${parseInt(month)}/${parseInt(day)}/${year}`;
-            const suffix = rest.length > 0 ? `-${rest.join("-")}` : "";
+        const files = await readDir(DEFAULT_PATH, {
+          baseDir: BaseDirectory.AppData,
+        });
+
+        const fileItems: FileItem[] = files
+          .filter((file) => file.name !== null && file.name.endsWith(".html"))
+          .map((file) => {
+            // Extract date from filename (assumes YYYY-MM-DD format)
+            const name = file.name!.replace(".html", "");
+            const dateParts = name.split("-");
+            if (dateParts.length >= 3) {
+              const [year, month, day, ...rest] = dateParts;
+              const displayDate = `${parseInt(month)}/${parseInt(day)}/${year}`;
+              const suffix = rest.length > 0 ? `-${rest.join("-")}` : "";
+              return {
+                name: displayDate + suffix,
+                path: file.name!,
+                lastModified: new Date(),
+              };
+            }
             return {
-              name: displayDate + suffix,
-              path: `${fullPath}/${file.name}`,
+              name,
+              path: file.name!,
               lastModified: new Date(),
             };
-          }
-          return {
-            name,
-            path: `${fullPath}/${file.name}`,
-            lastModified: new Date(),
-          };
+          })
+          .sort((a, b) => {
+            // Sort by date (newest first) and then by suffix number if dates are the same
+            const aDate = a.path.split("-").slice(0, 3).join("-");
+            const bDate = b.path.split("-").slice(0, 3).join("-");
+
+            if (aDate === bDate) {
+              // If dates are the same, sort by suffix number
+              const aNum = parseInt(a.path.split("-")[3] || "0");
+              const bNum = parseInt(b.path.split("-")[3] || "0");
+              return bNum - aNum;
+            }
+
+            // Sort by date in reverse chronological order
+            return bDate.localeCompare(aDate);
+          });
+
+        setRecentFiles(fileItems);
+        onFilesLoaded(fileItems);
+      } catch (error) {
+        console.error("Error loading files:", error);
+        onFilesLoaded([]);
+      }
+    };
+
+    // Expose loadFiles through ref
+    React.useImperativeHandle(ref, () => ({
+      loadFiles,
+    }));
+
+    React.useEffect(() => {
+      loadFiles();
+    }, []);
+
+    const handleCreateNewFile = async () => {
+      try {
+        await createNewFile({
+          onSuccess: (content, fileName) => {
+            onFileSelect(content, fileName);
+          },
+          onLoadFiles: loadFiles,
+          onError: (error) => {
+            console.error("Error creating file:", error);
+          },
         });
-      setRecentFiles(fileItems);
-    } catch (error) {
-      console.error("Error loading files:", error);
-    }
-  };
+      } catch (error) {
+        console.error("Error creating file:", error);
+      }
+    };
 
-  React.useEffect(() => {
-    loadFiles();
-  }, []);
+    const handleFileSelect = async (file: FileItem) => {
+      try {
+        const content = await readTextFile(`${DEFAULT_PATH}/${file.path}`, {
+          baseDir: BaseDirectory.AppData,
+        });
+        onFileSelect(content, file.path);
+      } catch (error) {
+        console.error("Error reading file:", error);
+      }
+    };
 
-  const createNewFile = async () => {
-    try {
-      const docDir = await documentDir();
-      const fullPath = `${docDir}/${DEFAULT_PATH}`;
-
-      // Get current date in EST
-      const now = new Date();
-      const estFormatter = new Intl.DateTimeFormat("en-US", {
-        timeZone: "America/New_York",
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      });
-
-      const parts = estFormatter.formatToParts(now).reduce((acc, part) => {
-        if (part.type !== "literal") {
-          acc[part.type] = part.value;
+    const deleteFile = async (path: string) => {
+      const confirmed = await ask(
+        "Are you sure you want to delete this file?",
+        {
+          title: "Delete File",
         }
-        return acc;
-      }, {} as Record<string, string>);
+      );
 
-      const shortDate = `${parts.year}-${parts.month}-${parts.day}`;
-
-      // Try to find an available filename
-      let counter = 1;
-      let fileName;
-      let filePath;
-
-      while (true) {
-        fileName = counter === 1 ? shortDate : `${shortDate}-${counter}`;
-        filePath = `${fullPath}/${fileName}.html`;
-
-        // Check if file exists
+      if (confirmed) {
         try {
-          const fileExists = await exists(filePath);
-          if (!fileExists) {
-            break;
-          }
-          counter++;
+          await remove(`${DEFAULT_PATH}/${path}`, {
+            baseDir: BaseDirectory.AppData,
+          });
+          await loadFiles();
         } catch (error) {
-          // If error checking existence, assume file doesn't exist
-          break;
+          console.error("Error deleting file:", error);
         }
       }
+    };
 
-      const initialContent =
-        "<h1>New Document</h1><p>Start writing here...</p>";
-      await writeFile(filePath, new TextEncoder().encode(initialContent));
-      await loadFiles();
-      onFileSelect(initialContent, fileName);
-    } catch (error) {
-      console.error("Error creating file:", error);
-    }
-  };
+    const handleRename = async (file: FileItem) => {
+      // Start editing with the current display name
+      setEditingFile(file.path);
+      setEditingName(file.name);
+    };
 
-  const handleFileSelect = async (file: FileItem) => {
-    try {
-      const content = new TextDecoder().decode(await readFile(file.path));
-      onFileSelect(content, file.name);
-    } catch (error) {
-      console.error("Error reading file:", error);
-    }
-  };
-
-  const deleteFile = async (path: string) => {
-    const confirmed = await ask("Are you sure you want to delete this file?", {
-      title: "Delete File",
-    });
-
-    if (confirmed) {
+    const handleRenameSubmit = async (
+      file: FileItem,
+      newDisplayName: string
+    ) => {
       try {
-        await remove(path);
+        // Convert display name (M/D/YYYY) back to file format (YYYY-MM-DD)
+        let newFileName = newDisplayName;
+        const dateParts = newDisplayName.split("/");
+        if (dateParts.length === 3) {
+          const [month, day, year] = dateParts;
+          newFileName = `${year}-${month.padStart(2, "0")}-${day.padStart(
+            2,
+            "0"
+          )}`;
+        }
+
+        // Add back the .html extension
+        const oldPath = `${DEFAULT_PATH}/${file.path}`;
+        const newPath = `${DEFAULT_PATH}/${newFileName}.html`;
+
+        // Check if target file already exists
+        const fileExists = await exists(newPath, {
+          baseDir: BaseDirectory.AppData,
+        });
+        if (fileExists && newPath !== oldPath) {
+          await ask(
+            "A file with this name already exists. Please choose a different name.",
+            { title: "Error" }
+          );
+          return;
+        }
+
+        await rename(oldPath, newPath, {
+          oldPathBaseDir: BaseDirectory.AppData,
+          newPathBaseDir: BaseDirectory.AppData,
+        });
+        setEditingFile(null);
+        setEditingName("");
         await loadFiles();
       } catch (error) {
-        console.error("Error deleting file:", error);
+        console.error("Error renaming file:", error);
       }
-    }
-  };
+    };
 
-  const handleRename = async (file: FileItem) => {
-    // Start editing with the current display name
-    setEditingFile(file.path);
-    setEditingName(file.name);
-  };
+    const filteredFiles = recentFiles.filter((file) =>
+      file.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
-  const handleRenameSubmit = async (file: FileItem, newDisplayName: string) => {
-    try {
-      const docDir = await documentDir();
-      const fullPath = `${docDir}/${DEFAULT_PATH}`;
+    const handleResize = (delta: number) => {
+      const newWidth = Math.max(180, Math.min(576, width + delta)); // Min: 180px, Max: 576px
+      setWidth(newWidth);
+    };
 
-      // Convert display name (M/D/YYYY) back to file format (YYYY-MM-DD)
-      let newFileName = newDisplayName;
-      const dateParts = newDisplayName.split("/");
-      if (dateParts.length === 3) {
-        const [month, day, year] = dateParts;
-        newFileName = `${year}-${month.padStart(2, "0")}-${day.padStart(
-          2,
-          "0"
-        )}`;
-      }
-
-      // Add back the .html extension
-      const newPath = `${fullPath}/${newFileName}.html`;
-
-      // Check if target file already exists
-      const fileExists = await exists(newPath);
-      if (fileExists && newPath !== file.path) {
-        await ask(
-          "A file with this name already exists. Please choose a different name.",
-          {
-            title: "Error",
-          }
-        );
-        return;
-      }
-
-      await rename(file.path, newPath);
-      setEditingFile(null);
-      setEditingName("");
-      await loadFiles();
-    } catch (error) {
-      console.error("Error renaming file:", error);
-    }
-  };
-
-  const filteredFiles = recentFiles.filter((file) =>
-    file.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const handleResize = (delta: number) => {
-    const newWidth = Math.max(180, Math.min(576, width + delta)); // Min: 180px, Max: 576px
-    setWidth(newWidth);
-  };
-
-  return (
-    <div
-      className={cn(
-        "group relative flex flex-col border-r bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
-        isCollapsed ? "w-14" : "",
-        className
-      )}
-      style={!isCollapsed ? { width: `${width}px` } : undefined}
-    >
-      {!isCollapsed && <ResizeHandle onResize={handleResize} />}
-      <div className="flex items-center justify-between p-2 border-b">
-        {!isCollapsed && (
-          <span className="text-sm font-medium px-2">Files</span>
+    return (
+      <div
+        className={cn(
+          "group relative flex flex-col border-r bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+          isCollapsed ? "w-14" : "",
+          className
         )}
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 sidebar-transition"
-          onClick={onToggle}
-        >
-          {isCollapsed ? (
-            <PanelLeft className="h-4 w-4" />
-          ) : (
-            <PanelLeftClose className="h-4 w-4" />
+        style={!isCollapsed ? { width: `${width}px` } : undefined}
+      >
+        {!isCollapsed && <ResizeHandle onResize={handleResize} />}
+        <div className="flex items-center justify-between p-2 border-b">
+          {!isCollapsed && (
+            <span className="text-xs font-medium px-2">Files</span>
           )}
-        </Button>
-      </div>
-
-      <div className={cn("flex-1 overflow-hidden", isCollapsed && "hidden")}>
-        <div className="p-3">
-          <div className="relative">
-            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search files..."
-              className="pl-8"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            onClick={onToggle}
+          >
+            {isCollapsed ? (
+              <PanelLeft className="h-4 w-4" />
+            ) : (
+              <PanelLeftClose className="h-4 w-4" />
+            )}
+          </Button>
         </div>
-
-        <div className="flex-1 px-3 sidebar-scroll overflow-y-auto">
-          <div className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-sm font-medium">Documents</h4>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 p-0"
-                  onClick={createNewFile}
-                >
-                  <FilePlus className="h-4 w-4" />
-                </Button>
-              </div>
-              {filteredFiles.map((file) => (
-                <HoverCard key={file.path}>
-                  <HoverCardTrigger asChild>
-                    <div className="flex items-center">
-                      <Button
-                        variant="ghost"
-                        className="flex-1 justify-start gap-2 px-2 sidebar-transition min-w-0"
-                        onClick={() => handleFileSelect(file)}
-                      >
-                        <FileText className="h-4 w-4 flex-shrink-0" />
+        {!isCollapsed && (
+          <div className="flex flex-col h-[calc(100%-3.5rem)]">
+            <div className="flex items-center gap-2 px-4 py-2">
+              <Search className="h-3 w-3 text-muted-foreground" />
+              <Input
+                className="h-7 text-xs"
+                placeholder="Search files..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start gap-2 text-xs h-7"
+                onClick={handleCreateNewFile}
+              >
+                <FilePlus className="h-3 w-3" />
+                New File
+              </Button>
+            </div>
+            <div className="flex items-center gap-2 px-4 py-2">
+              <Clock className="h-3 w-3 text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Recent</span>
+            </div>
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <div className="pb-12">
+                {filteredFiles.map((file) => {
+                  const isActive =
+                    file.path ===
+                    (activeFile?.endsWith(".html")
+                      ? activeFile
+                      : `${activeFile}.html`);
+                  return (
+                    <div
+                      key={file.path}
+                      className={cn(
+                        "w-full text-left group/item flex items-center gap-2 px-4 py-1.5 hover:bg-accent cursor-pointer",
+                        isActive && "bg-accent"
+                      )}
+                      onClick={() => handleFileSelect(file)}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === "Space") {
+                          handleFileSelect(file);
+                        }
+                      }}
+                    >
+                      <div className="flex-1 flex items-center min-w-0">
                         {editingFile === file.path ? (
                           <Input
-                            className="h-6 py-1"
+                            className="h-6 text-xs"
                             value={editingName}
                             onChange={(e) => setEditingName(e.target.value)}
                             onKeyDown={(e) => {
+                              e.stopPropagation();
                               if (e.key === "Enter") {
-                                e.preventDefault();
                                 handleRenameSubmit(file, editingName);
                               } else if (e.key === "Escape") {
                                 setEditingFile(null);
@@ -318,69 +324,51 @@ export function Sidebar({
                               }
                             }}
                             onBlur={() => {
-                              if (editingName !== file.name) {
-                                handleRenameSubmit(file, editingName);
-                              }
                               setEditingFile(null);
                               setEditingName("");
                             }}
                             autoFocus
+                            onClick={(e) => e.stopPropagation()}
                           />
                         ) : (
-                          <span className="truncate min-w-0">{file.name}</span>
+                          <span className="truncate text-xs">{file.name}</span>
                         )}
-                      </Button>
-                      <div className="flex flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      </div>
+                      <div className="flex opacity-0 group-hover/item:opacity-100 transition-opacity shrink-0">
                         <Button
                           variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => handleRename(file)}
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRename(file);
+                          }}
                         >
-                          <Pencil className="h-4 w-4" />
+                          <Pencil className="h-3 w-3" />
                         </Button>
                         <Button
                           variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                          onClick={() => deleteFile(file.path)}
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteFile(file.path);
+                          }}
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
-                  </HoverCardTrigger>
-                  <HoverCardContent side="right" align="start" className="w-72">
-                    <div className="space-y-2">
-                      <h5 className="font-medium">{file.name}</h5>
-                      <div className="flex items-center text-sm text-muted-foreground">
-                        <Clock className="mr-1 h-4 w-4" />
-                        {file.lastModified.toLocaleDateString()}
-                      </div>
-                      <div className="text-sm text-muted-foreground truncate">
-                        {file.path}
-                      </div>
-                    </div>
-                  </HoverCardContent>
-                </HoverCard>
-              ))}
+                  );
+                })}
+              </div>
+            </div>
+            <div className="absolute bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-2 px-4">
+              <ThemeToggle />
             </div>
           </div>
-        </div>
+        )}
       </div>
-
-      {isCollapsed && (
-        <div className="py-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="w-full h-10 sidebar-transition"
-            onClick={createNewFile}
-          >
-            <FilePlus className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
-    </div>
-  );
-}
+    );
+  }
+);

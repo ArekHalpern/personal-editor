@@ -1,27 +1,29 @@
 {
-  "identifier": "default-capability",
-  "description": "Default capabilities for the application",
-  "local": true,
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "main-capability",
+  "description": "Capability for the main window",
   "windows": ["main"],
   "permissions": [
-    "core:default",
-    "core:path:default",
     "fs:default",
-    "fs:allow-create",
-    "fs:allow-read-file",
-    "fs:allow-write-file",
-    "fs:allow-read-dir",
-    "fs:allow-mkdir",
-    "fs:allow-remove",
-    "fs:allow-document-write",
-    "fs:allow-document-write-recursive",
-    "fs:scope-document-recursive",
     "dialog:default",
     "dialog:allow-ask",
     "dialog:allow-confirm",
     "dialog:allow-message",
-    "dialog:allow-open",
-    "dialog:allow-save"
-  ],
-  "platforms": ["macOS"]
+    {
+      "identifier": "fs:allow-app-write-recursive",
+      "allow": [{ "path": "$APPDATA/ai-editor-files/**" }]
+    },
+    {
+      "identifier": "fs:allow-app-read-recursive",
+      "allow": [{ "path": "$APPDATA/ai-editor-files/**" }]
+    },
+    {
+      "identifier": "fs:allow-app-meta-recursive",
+      "allow": [{ "path": "$APPDATA/ai-editor-files/**" }]
+    },
+    {
+      "identifier": "fs:scope-app-recursive",
+      "allow": [{ "path": "$APPDATA/ai-editor-files/**" }]
+    }
+  ]
 }
