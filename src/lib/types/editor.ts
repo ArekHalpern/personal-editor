@@ -27,9 +27,9 @@ export interface LineMetadata {
   id: string;
   number: number;
   content: string;
-  type: 'paragraph' | 'heading' | 'list-item';
+  type: 'paragraph' | 'list-item';
   attrs?: {
-    level?: number;
+    [key: string]: unknown;
   };
   timestamp: Date;
   lastModified?: Date;
@@ -50,9 +50,7 @@ export interface EditorLineState {
 export const editorConfig = {
   extensions: [
     StarterKit.configure({
-      heading: {
-        levels: [1, 2],
-      },
+      heading: false,
     }),
     BubbleMenuExtension.configure({
       shouldShow: ({ editor, state }) => {

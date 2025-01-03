@@ -305,7 +305,6 @@ async function processResponse(
             ...line,
             content: change.content.replace(/<[^>]*>/g, ''),
             type: change.type,
-            attrs: change.attrs,
             timestamp: now,
             lastModified: now,
             aiEnhanced: true,
@@ -327,9 +326,7 @@ async function processResponse(
     case 'continue_text':
       const newLines = response.newLines.map((line, index) => ({
         content: line.content.replace(/<[^>]*>/g, ''),
-        // Use the correct type and attrs structure
         type: line.type,
-        attrs: line.attrs,
         id: crypto.randomUUID(),
         number: response.afterLine + index + 1,
         timestamp: new Date(now),

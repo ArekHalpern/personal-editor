@@ -2,7 +2,7 @@ export interface LineMetadata {
   id: string;
   number: number;
   content: string;
-  type: 'paragraph' | 'heading1' | 'heading2' | 'list-item';
+  type: 'paragraph' | 'list-item';
   timestamp: Date;
   lastModified?: Date;
   aiEnhanced?: boolean;
