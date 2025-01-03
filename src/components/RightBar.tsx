@@ -72,25 +72,39 @@ export function RightBar({
 
   const scrollToBottom = React.useCallback(() => {
     if (scrollRef.current) {
-      // Get the scroll container (parent of our ref)
-      const scrollContainer = scrollRef.current.parentElement;
-      if (scrollContainer) {
-        setTimeout(() => {
-          scrollContainer.scrollTop = scrollContainer.scrollHeight;
-        }, 0);
+      // Get the ScrollArea viewport
+      const viewport = scrollRef.current.closest(
+        "[data-radix-scroll-area-viewport]"
+      );
+      if (viewport) {
+        // Force immediate scroll to bottom
+        viewport.scrollTop = viewport.scrollHeight;
+
+        // Then smooth scroll to ensure it's visible
+        requestAnimationFrame(() => {
+          viewport.scrollTo({
+            top: viewport.scrollHeight,
+            behavior: "smooth",
+          });
+        });
       }
     }
   }, []);
 
   // Scroll when messages change
   React.useEffect(() => {
+    // Immediate scroll for new messages
     scrollToBottom();
+    // Double-check scroll after a short delay to ensure content is rendered
+    const timeoutId = setTimeout(scrollToBottom, 100);
+    return () => clearTimeout(timeoutId);
   }, [messages, scrollToBottom]);
 
-  // Also scroll when the right bar is toggled
+  // Scroll when the right bar is toggled
   React.useEffect(() => {
     if (!isCollapsed) {
-      setTimeout(scrollToBottom, 100); // Wait for animation
+      const timeoutId = setTimeout(scrollToBottom, 150);
+      return () => clearTimeout(timeoutId);
     }
   }, [isCollapsed, scrollToBottom]);
 
@@ -248,9 +262,9 @@ export function RightBar({
         </Button>
       </div>
       {!isCollapsed && (
-        <div className="flex-1 overflow-hidden">
-          <Tabs defaultValue="chat" className="h-full">
-            <div className="flex items-center border-b px-1">
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <Tabs defaultValue="chat" className="flex-1 flex flex-col h-full">
+            <div className="flex-none flex items-center border-b px-1">
               <TabsList className="h-10 p-1 gap-1">
                 <TabsTrigger value="chat" className="flex items-center gap-2">
                   <Sparkles className="h-3.5 w-3.5" />
@@ -268,11 +282,11 @@ export function RightBar({
 
             <TabsContent
               value="chat"
-              className="flex flex-col h-[calc(100%-2.5rem)]"
+              className="flex-1 flex flex-col overflow-hidden data-[state=active]:flex-1"
             >
-              <div className="flex-1 relative">
-                <ScrollArea className="absolute inset-0 p-4">
-                  <div className="space-y-4" ref={scrollRef}>
+              <div className="flex-1 flex flex-col min-h-0">
+                <ScrollArea>
+                  <div className="flex flex-col p-4 space-y-4" ref={scrollRef}>
                     {messages.map((message, index) => (
                       <div
                         key={index}
@@ -305,11 +319,12 @@ export function RightBar({
                         </span>
                       </div>
                     ))}
+                    <div className="h-4 flex-none" />
                   </div>
                 </ScrollArea>
               </div>
 
-              <div className="p-4 border-t">
+              <div className="flex-none p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/95">
                 <div className="relative">
                   <Input
                     placeholder="How can I help edit?"
@@ -350,8 +365,11 @@ export function RightBar({
               </div>
             </TabsContent>
 
-            <TabsContent value="history" className="p-4 mt-0">
-              <ScrollArea className="h-[calc(100vh-10rem)]">
+            <TabsContent
+              value="history"
+              className="p-4 mt-0 flex-1 overflow-auto"
+            >
+              <ScrollArea className="h-full">
                 <div className="space-y-4">
                   {enhancementHistory.map((item, index) => (
                     <div key={index} className="space-y-2">
