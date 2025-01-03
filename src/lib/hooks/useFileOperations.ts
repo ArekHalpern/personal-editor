@@ -28,15 +28,39 @@ export function useFileOperations({
       setRecentFiles(files);
       onFilesLoaded(files);
 
-      // If this is the initial load and there are no files, create one
-      if (isInitialLoad && files.length === 0) {
+      // If this is the initial load and there are files, open the first one
+      if (isInitialLoad) {
         setIsInitialLoad(false);
-        const { fileName, content } = await FileService.createNewFile();
-        onFileSelect(content, fileName);
-        // Reload files to show the new file
-        const updatedFiles = await FileService.loadFiles();
-        setRecentFiles(updatedFiles);
-        onFilesLoaded(updatedFiles);
+        
+        // Find the first file (not folder) in the file list
+        const findFirstFile = (items: FileItem[]): FileItem | null => {
+          for (const item of items) {
+            if (!item.isDirectory) {
+              return item;
+            }
+            if (item.children) {
+              const file = findFirstFile(item.children);
+              if (file) return file;
+            }
+          }
+          return null;
+        };
+
+        const firstFile = findFirstFile(files);
+
+        if (firstFile) {
+          // Open existing file
+          const content = await FileService.readFile(firstFile.path);
+          onFileSelect(content, firstFile.path);
+        } else {
+          // Only create a new file if no files exist
+          const { fileName, content } = await FileService.createNewFile();
+          onFileSelect(content, fileName);
+          // Reload files to show the new file
+          const updatedFiles = await FileService.loadFiles();
+          setRecentFiles(updatedFiles);
+          onFilesLoaded(updatedFiles);
+        }
       }
     } catch (error) {
       console.error("Error loading files:", error);

@@ -10,7 +10,6 @@ import { debounce } from "lodash";
 import { EmptyState } from "./components/EmptyState";
 import { AUTO_SAVE_DELAY } from "./lib/constants";
 import { editorConfig, EnhancementHistoryItem } from "./lib/types/editor";
-import { getFileName } from "./lib/utils/string";
 import { Header } from "./components/Header";
 import { FileService } from "./lib/utils/filesystem/fileService";
 
@@ -116,65 +115,16 @@ function App() {
 
     const handleUpdate = async () => {
       if (!hasFiles || !currentFile) return;
-
-      // Get the first heading content
-      const heading = editor
-        .getJSON()
-        .content?.find(
-          (node) => node.type === "heading" && node.attrs?.level === 1
-        );
-
-      if (heading?.content?.[0]?.text) {
-        const headerText = heading.content[0].text.trim();
-        if (headerText) {
-          // Generate new filename from header text, preserving symbols
-          const newFileName = getFileName(headerText);
-
-          if (newFileName !== currentFile) {
-            try {
-              // Cancel any pending saves
-              debouncedSaveRef.current.cancel();
-
-              // Try to rename the file
-              const result = await FileService.renameFile(
-                currentFile,
-                headerText,
-                editor,
-                true
-              );
-
-              if (result.success) {
-                setCurrentFile(result.fileName!);
-                debouncedSaveRef.current(
-                  result.fileName!,
-                  editor.getHTML(),
-                  true
-                );
-              }
-
-              return;
-            } catch (error) {
-              console.error("Error during rename:", error);
-            }
-          }
-        }
-      }
-
-      // If we didn't do a rename, just do a normal save
+      // Just do a normal save
       debouncedSaveRef.current(currentFile, editor.getHTML());
     };
 
-    let updateTimeout: NodeJS.Timeout;
-    const debouncedUpdate = () => {
-      clearTimeout(updateTimeout);
-      updateTimeout = setTimeout(handleUpdate, 500);
-    };
-
+    const debouncedUpdate = debounce(handleUpdate, AUTO_SAVE_DELAY);
     editor.on("update", debouncedUpdate);
 
     return () => {
-      clearTimeout(updateTimeout);
       editor.off("update", debouncedUpdate);
+      debouncedUpdate.cancel();
     };
   }, [editor, currentFile, hasFiles]);
 
@@ -278,25 +228,25 @@ function App() {
             {hasFiles ? (
               <>
                 <Header
-                  editor={editor}
                   currentFile={currentFile}
-                  onTitleChange={(title) => {
-                    const newFileName = getFileName(title);
-                    if (newFileName !== currentFile) {
-                      FileService.renameFile(currentFile, title, editor, true)
-                        .then((result) => {
-                          if (result.success) {
-                            setCurrentFile(result.fileName!);
-                            debouncedSaveRef.current(
-                              result.fileName!,
-                              editor.getHTML(),
-                              true
-                            );
-                          }
-                        })
-                        .catch((error) => {
-                          console.error("Error during rename:", error);
-                        });
+                  onTitleChange={async (title) => {
+                    if (!currentFile) return;
+
+                    try {
+                      const result = await FileService.renameFile(
+                        currentFile,
+                        title,
+                        editor,
+                        true
+                      );
+
+                      if (result.success && result.fileName) {
+                        setCurrentFile(result.fileName);
+                        // Reload files to update sidebar
+                        sidebarRef.current?.loadFiles();
+                      }
+                    } catch (error) {
+                      console.error("Error during rename:", error);
                     }
                   }}
                 />
@@ -320,12 +270,13 @@ function App() {
           </div>
         </main>
         <RightBar
-          editor={editor}
           isCollapsed={isRightBarCollapsed}
           onToggle={() => setIsRightBarCollapsed(!isRightBarCollapsed)}
+          editor={editor}
           enhancementHistory={enhancementHistory}
           onEnhance={handleEnhance}
           onWidthChange={setRightBarWidth}
+          currentFile={currentFile}
         />
       </div>
     </ThemeProvider>

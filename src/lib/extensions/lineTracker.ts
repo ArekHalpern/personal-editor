@@ -28,19 +28,13 @@ export const LineTracker = Extension.create({
 
               doc.forEach((node, _pos) => {
                 const existingLine = storage.lines.get(lineNumber);
-                const nodeType = node.type.name;
                 
                 const lineMetadata: LineMetadata = {
                   id: existingLine?.id || uuidv4(),
                   number: lineNumber,
                   content: node.textContent,
-                  type: nodeType === 'heading' 
-                    ? node.attrs.level === 1 
-                      ? 'heading1'
-                      : 'heading2'
-                    : nodeType === 'paragraph' 
-                    ? 'paragraph' 
-                    : 'list-item',
+                  type: getLineType(node),
+                  attrs: node.type.name === 'heading' ? { level: node.attrs.level } : undefined,
                   timestamp: existingLine?.timestamp || new Date(),
                   lastModified: existingLine?.content !== node.textContent 
                     ? new Date() 
@@ -62,3 +56,14 @@ export const LineTracker = Extension.create({
     ];
   },
 });
+
+// Get the line type based on node type and attributes
+const getLineType = (node: any): LineMetadata['type'] => {
+  if (node.type.name === 'heading') {
+    return 'heading';
+  }
+  if (node.type.name === 'bulletList' || node.type.name === 'listItem') {
+    return 'list-item';
+  }
+  return 'paragraph';
+};

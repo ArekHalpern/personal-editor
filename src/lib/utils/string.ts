@@ -8,8 +8,18 @@ export const formatPath = (path: string): string => {
 };
 
 export const getDisplayName = (fileName: string): string => {
+  // If it's a folder, just return the name
+  if (!fileName.endsWith('.html')) {
+    return fileName;
+  }
+
   // Remove .html extension
   let name = fileName.replace(/\.html$/, "");
+
+  // If the name is empty or just whitespace, return "Untitled"
+  if (!name.trim()) {
+    return "Untitled";
+  }
 
   // Check if it's a local editor file
   if (name.toLowerCase().startsWith("local-editor-")) {
@@ -26,29 +36,38 @@ export const getDisplayName = (fileName: string): string => {
       const baseName = name.slice(0, lastHyphenIndex);
       const number = parseInt(possibleNumber);
       
-      // Preserve the exact baseName, just capitalize first letter of each word
-      const formattedName = baseName.split("-")
-        .map(part => {
-          if (part.length === 0) return part;
-          return part.charAt(0).toUpperCase() + part.slice(1);
-        })
-        .join("-");
+      // If baseName is empty, return just "Untitled" with number
+      if (!baseName.trim()) {
+        return `Untitled ${number}`;
+      }
       
-      return `${formattedName} ${number}`;
+      // Return the exact baseName without any case transformation
+      return `${baseName} ${number}`;
     }
   }
 
-  // For simple names, just capitalize first letter of each word
-  return name.split("-")
-    .map(part => {
-      if (part.length === 0) return part;
-      return part.charAt(0).toUpperCase() + part.slice(1);
-    })
-    .join("-");
+  // Return the name exactly as is, just with hyphens replaced by spaces
+  return name.replace(/-/g, " ");
 };
 
 export const getFileName = (displayName: string): string => {
-  // Keep the exact name, just ensure it's safe for the file system
-  const safeName = sanitizeFileName(displayName);
-  return safeName ? `${safeName}.html` : "untitled.html";
+  // If it's already a .html file, return as is
+  if (displayName.toLowerCase().endsWith('.html')) {
+    return displayName;
+  }
+
+  // Sanitize the display name
+  let safeName = sanitizeFileName(displayName);
+
+  // If empty after sanitization, use "Untitled"
+  if (!safeName.trim()) {
+    safeName = "Untitled";
+  }
+
+  // Convert spaces to hyphens but preserve case
+  const fileName = safeName
+    .trim()
+    .replace(/\s+/g, '-');
+
+  return `${fileName}.html`;
 }; 

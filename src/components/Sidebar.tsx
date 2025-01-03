@@ -150,7 +150,8 @@ export const Sidebar = React.forwardRef<
     return (
       <div
         className={cn(
-          "group/sidebar fixed top-0 left-0 flex h-screen flex-col border-r bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-30",
+          "group/sidebar fixed top-0 left-0 flex h-screen flex-col border-r",
+          "bg-muted/50 dark:bg-muted/50 backdrop-blur supports-[backdrop-filter]:bg-muted/50",
           isCollapsed && "w-14 transition-[width] duration-300 ease-in-out",
           className
         )}

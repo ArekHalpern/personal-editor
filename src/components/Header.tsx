@@ -1,39 +1,22 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Editor } from "@tiptap/react";
+import React, { useState, useEffect } from "react";
 import { getDisplayName } from "../lib/utils/string";
 
 interface HeaderProps {
-  editor: Editor;
   onTitleChange?: (title: string) => void;
   currentFile: string;
 }
 
-export function Header({ editor, onTitleChange, currentFile }: HeaderProps) {
+export function Header({ onTitleChange, currentFile }: HeaderProps) {
   const [title, setTitle] = useState("");
   const [isEditing, setIsEditing] = useState(false);
 
-  const updateTitleFromDocument = useCallback(() => {
-    // First try to get title from first heading
-    const firstHeading = editor.state.doc.firstChild;
-    if (firstHeading && firstHeading.type.name === "heading") {
-      const displayName = getDisplayName(firstHeading.textContent);
-      if (!isEditing) {
-        setTitle(displayName);
-      }
-      return;
-    }
-
-    // If no heading, use the currentFile name
-    if (currentFile && !isEditing) {
+  // Only update title from currentFile
+  useEffect(() => {
+    if (!isEditing && currentFile) {
       const displayName = getDisplayName(currentFile);
       setTitle(displayName);
     }
-  }, [editor.state.doc, currentFile, isEditing]);
-
-  // Update title when currentFile or editor content changes
-  useEffect(() => {
-    updateTitleFromDocument();
-  }, [currentFile, editor.state.doc, updateTitleFromDocument]);
+  }, [currentFile, isEditing]);
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTitle = e.target.value;
@@ -57,7 +40,9 @@ export function Header({ editor, onTitleChange, currentFile }: HeaderProps) {
       e.currentTarget.blur();
     } else if (e.key === "Escape") {
       setIsEditing(false);
-      updateTitleFromDocument();
+      if (currentFile) {
+        setTitle(getDisplayName(currentFile));
+      }
     }
   };
 

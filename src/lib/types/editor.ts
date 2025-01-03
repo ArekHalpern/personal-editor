@@ -27,7 +27,10 @@ export interface LineMetadata {
   id: string;
   number: number;
   content: string;
-  type: 'paragraph' | 'heading1' | 'heading2' | 'list-item';
+  type: 'paragraph' | 'heading' | 'list-item';
+  attrs?: {
+    level?: number;
+  };
   timestamp: Date;
   lastModified?: Date;
   aiEnhanced?: boolean;
@@ -48,7 +51,7 @@ export const editorConfig = {
   extensions: [
     StarterKit.configure({
       heading: {
-        levels: [2],
+        levels: [1, 2],
       },
     }),
     BubbleMenuExtension.configure({
@@ -94,8 +97,10 @@ export const editorConfig = {
 };
 
 // Editor Utilities
-export const getFirstHeadingText = (): string | null => {
-  return null;
+export const getFirstHeadingText = (content: EditorNode[]): string | null => {
+  if (content.length === 0) return null;
+  const firstNode = content[0];
+  return firstNode.text || null;
 };
 
 export const isEmptyDocument = (content: EditorNode[]): boolean => {

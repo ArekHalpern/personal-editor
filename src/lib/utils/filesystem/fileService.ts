@@ -102,10 +102,10 @@ export class FileService {
     for (const entry of entries) {
       if (!entry.name) continue;
 
-      const isDirectory = await exists(`${path}/${entry.name}/.`, {
+      const fullPath = `${path}/${entry.name}`;
+      const isDirectory = await exists(`${fullPath}/.`, {
         baseDir: BaseDirectory.AppData,
       });
-      const fullPath = `${path}/${entry.name}`;
 
       items.push({
         name: getDisplayName(entry.name),
@@ -125,28 +125,49 @@ export class FileService {
   }
 
   static async readFile(path: string): Promise<string> {
-    return await readTextFile(`${DEFAULT_PATH}/${path}`, {
-      baseDir: BaseDirectory.AppData,
-    });
+    try {
+      const fullPath = `${DEFAULT_PATH}/${path}`;
+      
+      // Check if path exists and is a file
+      const fileExists = await exists(fullPath, { baseDir: BaseDirectory.AppData });
+      if (!fileExists) {
+        throw new Error(`File does not exist at path: ${fullPath}`);
+      }
+
+      // Get file stats to check if it's a directory
+      const files = await readDir(fullPath, { baseDir: BaseDirectory.AppData })
+        .catch(() => null);
+      
+      if (files !== null) {
+        throw new Error(`Cannot read directory as file: ${fullPath}`);
+      }
+
+      return await readTextFile(fullPath, { baseDir: BaseDirectory.AppData });
+    } catch (error: any) {
+      throw new Error(`Failed to read file as text at path: ${path} with error: ${error?.message || String(error)}`);
+    }
   }
 
   static async writeFile(path: string, content: string): Promise<void> {
+    const fullPath = `${DEFAULT_PATH}/${path}`;
+    
     // Ensure the parent directory exists
-    const parentDir = path.split("/").slice(0, -1).join("/");
+    const parentDir = fullPath.split("/").slice(0, -1).join("/");
     if (parentDir) {
-      await mkdir(`${DEFAULT_PATH}/${parentDir}`, {
+      await mkdir(parentDir, {
         recursive: true,
         baseDir: BaseDirectory.AppData,
       });
     }
 
-    await writeTextFile(`${DEFAULT_PATH}/${path}`, content, {
+    await writeTextFile(fullPath, content, {
       baseDir: BaseDirectory.AppData,
     });
   }
 
   static async deleteFile(path: string): Promise<void> {
-    await remove(`${DEFAULT_PATH}/${path}`, {
+    const fullPath = `${DEFAULT_PATH}/${path}`;
+    await remove(fullPath, {
       baseDir: BaseDirectory.AppData,
     });
   }
@@ -193,7 +214,7 @@ export class FileService {
       await this.ensureDirectory();
 
       const fileName = await this.generateUntitledName();
-      const content = "<h1></h1><p></p>";
+      const content = "<p></p>";
 
       await this.writeFile(fileName, content);
 
@@ -215,6 +236,28 @@ export class FileService {
     isActiveFile: boolean
   ): Promise<FileOperationResult> {
     try {
+      const isDirectory = await exists(`${DEFAULT_PATH}/${oldPath}/.`, {
+        baseDir: BaseDirectory.AppData,
+      });
+
+      if (isDirectory) {
+        // For directories, just rename without file extension or content handling
+        const newFolderName = sanitizeFileName(newDisplayName);
+        const fullOldPath = this.getFullPath(oldPath);
+        const fullNewPath = this.getFullPath(newFolderName);
+
+        await rename(fullOldPath, fullNewPath, {
+          oldPathBaseDir: BaseDirectory.AppData,
+          newPathBaseDir: BaseDirectory.AppData,
+        });
+
+        return {
+          success: true,
+          fileName: newFolderName,
+        };
+      }
+
+      // For files, proceed with the existing logic
       const newFileName = getFileName(newDisplayName);
       const fullOldPath = this.getFullPath(oldPath);
       const fullNewPath = this.getFullPath(newFileName);
