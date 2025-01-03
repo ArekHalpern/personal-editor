@@ -6,6 +6,8 @@ export interface UserSettings {
   editor?: {
     fontSize?: number;
     lineHeight?: number;
+    fontFamily?: string;
+    fontWeight?: number;
   };
   ui?: {
     sidebarWidth?: number;

@@ -11,11 +11,57 @@ import { useSettings } from "../../lib/stores/settings";
 import { Separator } from "./separator";
 import { ThemeToggle } from "../theme-toggle";
 import { Slider } from "./slider";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./select";
 
 interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
+
+const FONT_OPTIONS = [
+  {
+    label: "Roboto",
+    value: "Roboto",
+    style: { fontFamily: "Roboto" },
+    description: "Modern sans-serif",
+  },
+  {
+    label: "Playfair Display",
+    value: "Playfair Display",
+    style: { fontFamily: "Playfair Display" },
+    description: "Elegant serif",
+  },
+  {
+    label: "JetBrains Mono",
+    value: "JetBrains Mono",
+    style: { fontFamily: "JetBrains Mono" },
+    description: "Monospace",
+  },
+  {
+    label: "Merriweather",
+    value: "Merriweather",
+    style: { fontFamily: "Merriweather" },
+    description: "Classic serif",
+  },
+  {
+    label: "Space Grotesk",
+    value: "Space Grotesk",
+    style: { fontFamily: "Space Grotesk" },
+    description: "Modern geometric",
+  },
+  {
+    label: "Inter",
+    value: "Inter",
+    style: { fontFamily: "Inter" },
+    description: "Clean sans-serif",
+  },
+];
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { settings, updateSettings, updateConfirmation } = useSettings();
@@ -43,6 +89,50 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">
+                      Font Family
+                    </span>
+                  </div>
+                  <Select
+                    value={settings.editor?.fontFamily || "Roboto"}
+                    onValueChange={(value: string) =>
+                      updateSettings({
+                        editor: { ...settings.editor, fontFamily: value },
+                      })
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select font">
+                        <span
+                          style={{
+                            fontFamily: settings.editor?.fontFamily || "Roboto",
+                          }}
+                          className="flex items-center"
+                        >
+                          <span className="text-base">
+                            {settings.editor?.fontFamily || "Roboto"}
+                          </span>
+                        </span>
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FONT_OPTIONS.map((font) => (
+                        <SelectItem key={font.value} value={font.value}>
+                          <div className="flex flex-col">
+                            <span style={font.style} className="text-base">
+                              {font.label}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {font.description}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
                       Font Size
                     </span>
                     <span className="text-sm text-muted-foreground w-12 text-right">
@@ -57,6 +147,27 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     onValueChange={([value]) =>
                       updateSettings({
                         editor: { ...settings.editor, fontSize: value },
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Font Weight
+                    </span>
+                    <span className="text-sm text-muted-foreground w-12 text-right">
+                      {settings.editor?.fontWeight}
+                    </span>
+                  </div>
+                  <Slider
+                    value={[settings.editor?.fontWeight || 400]}
+                    min={300}
+                    max={700}
+                    step={100}
+                    onValueChange={([value]) =>
+                      updateSettings({
+                        editor: { ...settings.editor, fontWeight: value },
                       })
                     }
                   />

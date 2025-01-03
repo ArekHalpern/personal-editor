@@ -28,7 +28,7 @@ export function ResizeHandle({ className, onResize }: ResizeHandleProps) {
   return (
     <div
       className={cn(
-        "absolute top-0 right-0 w-1 h-full cursor-col-resize group/resize hover:bg-accent",
+        "absolute top-0 right-0 w-2 h-full cursor-col-resize group/resize hover:bg-accent",
         className
       )}
       onMouseDown={handleMouseDown}

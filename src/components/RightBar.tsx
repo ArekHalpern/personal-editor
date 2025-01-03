@@ -109,7 +109,7 @@ export function RightBar({
   }, [isCollapsed, scrollToBottom]);
 
   const handleResize = (delta: number) => {
-    const newWidth = Math.max(300, Math.min(800, width - delta));
+    const newWidth = Math.max(250, Math.min(800, width - delta));
     setWidth(newWidth);
     onWidthChange?.(newWidth);
   };
@@ -228,7 +228,7 @@ export function RightBar({
   return (
     <div
       className={cn(
-        "group relative flex flex-col border-l",
+        "group/rightbar relative flex flex-col border-l",
         "bg-muted/50 dark:bg-muted/50 backdrop-blur supports-[backdrop-filter]:bg-muted/50",
         isCollapsed ? "w-14" : "",
         className
@@ -236,7 +236,10 @@ export function RightBar({
       style={!isCollapsed ? { width: `${width}px` } : undefined}
     >
       {!isCollapsed && (
-        <ResizeHandle className="left-0 right-auto" onResize={handleResize} />
+        <ResizeHandle
+          className="left-0 right-auto z-50"
+          onResize={handleResize}
+        />
       )}
       <div className="flex items-center justify-between p-2 border-b">
         {!isCollapsed && (

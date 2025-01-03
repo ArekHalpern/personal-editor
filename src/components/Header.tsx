@@ -56,7 +56,7 @@ export function Header({ onTitleChange, currentFile }: HeaderProps) {
         onFocus={handleTitleFocus}
         onKeyDown={handleKeyDown}
         placeholder="Untitled"
-        className="w-full px-4 py-2 text-2xl font-bold bg-transparent border-none outline-none focus:ring-0 pl-[3.5rem]"
+        className="w-full px-4 py-2 text-2xl font-bold bg-transparent border-none outline-none focus:ring-0 pl-[3.5rem] header-title"
       />
     </div>
   );

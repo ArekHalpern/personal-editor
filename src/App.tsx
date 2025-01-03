@@ -214,6 +214,14 @@ function App() {
         "--editor-line-height",
         String(settings.editor.lineHeight)
       );
+      document.documentElement.style.setProperty(
+        "--editor-font-family",
+        settings.editor.fontFamily || "Roboto"
+      );
+      document.documentElement.style.setProperty(
+        "--editor-font-weight",
+        String(settings.editor.fontWeight || 400)
+      );
     }
   }, [settings.editor]);
 

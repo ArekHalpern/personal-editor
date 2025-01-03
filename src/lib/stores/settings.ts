@@ -15,6 +15,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   editor: {
     fontSize: 16,
     lineHeight: 1.5,
+    fontFamily: 'Roboto',
+    fontWeight: 400,
   },
   ui: {
     sidebarWidth: 300,
