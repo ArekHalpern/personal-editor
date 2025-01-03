@@ -3,7 +3,7 @@ import cors from 'cors';
 import OpenAI from "openai";
 import dotenv from 'dotenv';
 import { LineMetadata } from "./types/editor";
-import { AssistantRequest, AssistantResponse, EditOperation, AnalyzeTextResponse } from './types/assistant';
+import { AssistantRequest, AssistantResponse, EditOperation, AnalyzeTextResponse, DeleteTextResponse } from './types/assistant';
 import { parseCommand } from './utils/commandParser';
 
 dotenv.config();
@@ -179,6 +179,20 @@ function getSystemPrompt(operation: EditOperation, filename: string, isFileQuery
       '    "technicalDetails": string\n' +
       '  }\n' +
       '}',
+
+    'delete_text': basePrompt +
+      'Your task is to identify and delete specified lines from the document.\n\n' +
+      'Rules:\n' +
+      '1. Only delete explicitly requested lines\n' +
+      '2. Verify line numbers are valid\n' +
+      '3. Maintain document coherence after deletion\n\n' +
+      responseFormat + '\n' +
+      'JSON Response Structure:\n' +
+      '{\n' +
+      '  "operation": "delete_text",\n' +
+      '  "message": "Description of deletion",\n' +
+      '  "linesToDelete": number[]\n' +
+      '}',
   };
 
   return operationPrompts[operation];
@@ -299,6 +313,38 @@ async function processResponse(
         message: analysisMessage,
         analysis: analysis.analysis,
         enhancedText: null
+      };
+
+    case 'delete_text':
+      const deleteResponse = response as DeleteTextResponse;
+      // Filter out deleted lines and empty lines in one pass
+      const remainingLines = lineMetadata
+        .filter(line => 
+          !deleteResponse.linesToDelete.includes(line.number) && 
+          line.content && 
+          line.content.trim().length > 0
+        )
+        .map((line, idx) => ({
+          ...line,
+          number: idx + 1, // Renumber remaining lines
+          type: line.type || 'paragraph' // Ensure valid type
+        }));
+
+      // If no lines remain, ensure at least one paragraph
+      if (remainingLines.length === 0) {
+        remainingLines.push({
+          id: crypto.randomUUID(),
+          number: 1,
+          content: ' ',
+          type: 'paragraph',
+          timestamp: new Date(),
+          lastModified: new Date()
+        });
+      }
+
+      return {
+        message: response.message,
+        enhancedText: { lines: remainingLines }
       };
 
     default:

@@ -103,6 +103,17 @@ const operationPatterns: OperationPatterns[] = [
       'understand this file',
       'understand the file'
     ]
+  },
+  {
+    operation: 'delete_text',
+    patterns: [
+      'delete',
+      'remove',
+      'erase',
+      'clear',
+      'cut',
+      'eliminate'
+    ]
   }
 ];
 

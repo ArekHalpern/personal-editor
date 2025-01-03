@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { cn } from "../lib/utils/cn";
 
 interface BubbleMenuProps {
   editor: Editor;
@@ -157,14 +158,17 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
         placement: "bottom",
         offset: [0, 10],
       }}
-      className="flex flex-col overflow-visible rounded-lg border bg-background shadow-md"
+      className="bubble-menu flex flex-col overflow-visible rounded-lg"
     >
       <div className="flex">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleBold().run()}
-          className={editor.isActive("bold") ? "bg-accent" : ""}
+          className={cn(
+            "hover:bg-accent/50",
+            editor.isActive("bold") ? "active-item" : ""
+          )}
           disabled={isWithinH1()}
         >
           <Bold className="h-4 w-4" />
@@ -173,7 +177,10 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleItalic().run()}
-          className={editor.isActive("italic") ? "bg-accent" : ""}
+          className={cn(
+            "hover:bg-accent/50",
+            editor.isActive("italic") ? "active-item" : ""
+          )}
           disabled={isWithinH1()}
         >
           <Italic className="h-4 w-4" />
@@ -184,9 +191,10 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
           onClick={() =>
             editor.chain().focus().toggleHeading({ level: 1 }).run()
           }
-          className={
-            editor.isActive("heading", { level: 1 }) ? "bg-accent" : ""
-          }
+          className={cn(
+            "hover:bg-accent/50",
+            editor.isActive("heading", { level: 1 }) ? "active-item" : ""
+          )}
         >
           <Heading1 className="h-4 w-4" />
         </Button>
@@ -196,9 +204,10 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
           onClick={() =>
             editor.chain().focus().toggleHeading({ level: 2 }).run()
           }
-          className={
-            editor.isActive("heading", { level: 2 }) ? "bg-accent" : ""
-          }
+          className={cn(
+            "hover:bg-accent/50",
+            editor.isActive("heading", { level: 2 }) ? "active-item" : ""
+          )}
           disabled={isWithinH1()}
         >
           <Heading2 className="h-4 w-4" />
@@ -207,7 +216,10 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
-          className={editor.isActive("bulletList") ? "bg-accent" : ""}
+          className={cn(
+            "hover:bg-accent/50",
+            editor.isActive("bulletList") ? "active-item" : ""
+          )}
           disabled={isWithinH1()}
         >
           <List className="h-4 w-4" />
@@ -216,7 +228,10 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
           variant="ghost"
           size="sm"
           onClick={() => editor.chain().focus().toggleCode().run()}
-          className={editor.isActive("code") ? "bg-accent" : ""}
+          className={cn(
+            "hover:bg-accent/50",
+            editor.isActive("code") ? "active-item" : ""
+          )}
           disabled={isWithinH1()}
         >
           <Code className="h-4 w-4" />
@@ -226,7 +241,7 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
             variant="ghost"
             size="sm"
             onClick={handleShowPrompt}
-            className="gap-1"
+            className={cn("gap-1 hover:bg-accent/50")}
             disabled={isWithinH1()}
           >
             <Sparkles className="h-4 w-4" />
@@ -234,7 +249,7 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
         )}
       </div>
       {showPrompt && (
-        <div className="flex items-center p-1 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex items-center p-1 border-t">
           <Input
             ref={inputRef}
             className="h-7 text-xs bg-transparent border-none focus-visible:ring-0 focus-visible:ring-offset-0"
@@ -256,7 +271,7 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
             onClick={() => {
               if (prompt) handleQuickEnhance(prompt);
             }}
-            className="px-2"
+            className="px-2 hover:bg-accent/50"
           >
             <Sparkles className="h-4 w-4" />
             {isEnhancing ? "..." : ""}
@@ -265,7 +280,7 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
             variant="ghost"
             size="sm"
             onClick={clearSelection}
-            className="px-2"
+            className="px-2 hover:bg-accent/50"
           >
             <X className="h-4 w-4" />
           </Button>

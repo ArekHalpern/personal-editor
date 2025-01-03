@@ -137,9 +137,49 @@
     padding-left: 3.5rem !important;
   }
 
-  .ProseMirror p {
-    @apply my-0;
-    line-height: 1.2;
+  /* Bubble Menu Styles */
+  .bubble-menu {
+    @apply shadow-lg backdrop-blur-sm;
+    background-color: hsl(var(--background));
+    border: 1px solid hsl(var(--border));
+  }
+
+  /* Dark theme bubble menu */
+  .dark .bubble-menu {
+    background-color: hsl(var(--card));
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1),
+                0 8px 16px -4px rgba(0, 0, 0, 0.4),
+                0 4px 8px -2px rgba(0, 0, 0, 0.25);
+  }
+
+  /* Ocean theme bubble menu */
+  .ocean .bubble-menu {
+    background-color: hsl(215 50% 18%);
+    border: 1px solid hsl(215 50% 25%);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1),
+                0 8px 16px -4px rgba(0, 0, 0, 0.4),
+                0 4px 8px -2px rgba(0, 0, 0, 0.25);
+  }
+
+  /* Dusk theme bubble menu */
+  .dusk .bubble-menu {
+    background-color: hsl(235 25% 20%);
+    border: 1px solid hsl(235 25% 30%);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1),
+                0 8px 16px -4px rgba(0, 0, 0, 0.4),
+                0 4px 8px -2px rgba(0, 0, 0, 0.25);
+  }
+
+  .bubble-menu .active-item {
+    @apply bg-accent text-accent-foreground;
+  }
+
+  .dark .bubble-menu .active-item,
+  .ocean .bubble-menu .active-item,
+  .dusk .bubble-menu .active-item {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
   }
 
   /* Heading styles */

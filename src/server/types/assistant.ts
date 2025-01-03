@@ -5,7 +5,8 @@ export type EditOperation =
   | 'multi_line_edit'
   | 'continue_text'
   | 'summarize_text'
-  | 'analyze_text';
+  | 'analyze_text'
+  | 'delete_text';
 
 export interface BaseResponse {
   operation: EditOperation;
@@ -64,12 +65,18 @@ export interface AnalyzeTextResponse extends BaseResponse {
   };
 }
 
+export interface DeleteTextResponse extends BaseResponse {
+  operation: 'delete_text';
+  linesToDelete: number[];
+}
+
 export type AssistantResponse = 
   | InlineEditResponse 
   | MultiLineEditResponse 
   | ContinueTextResponse 
   | SummarizeTextResponse 
-  | AnalyzeTextResponse;
+  | AnalyzeTextResponse
+  | DeleteTextResponse;
 
 export interface AssistantRequest {
   message: string;

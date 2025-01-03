@@ -70,17 +70,35 @@ export function RightBar({
   const [messages, setMessages] = React.useState<Message[]>([]);
   const scrollRef = React.useRef<HTMLDivElement>(null);
 
+  const scrollToBottom = React.useCallback(() => {
+    if (scrollRef.current) {
+      // Get the scroll container (parent of our ref)
+      const scrollContainer = scrollRef.current.parentElement;
+      if (scrollContainer) {
+        setTimeout(() => {
+          scrollContainer.scrollTop = scrollContainer.scrollHeight;
+        }, 0);
+      }
+    }
+  }, []);
+
+  // Scroll when messages change
+  React.useEffect(() => {
+    scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  // Also scroll when the right bar is toggled
+  React.useEffect(() => {
+    if (!isCollapsed) {
+      setTimeout(scrollToBottom, 100); // Wait for animation
+    }
+  }, [isCollapsed, scrollToBottom]);
+
   const handleResize = (delta: number) => {
     const newWidth = Math.max(300, Math.min(800, width - delta));
     setWidth(newWidth);
     onWidthChange?.(newWidth);
   };
-
-  React.useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
 
   const stripHtml = (html: string) => {
     const tmp = document.createElement("div");
@@ -252,42 +270,44 @@ export function RightBar({
               value="chat"
               className="flex flex-col h-[calc(100%-2.5rem)]"
             >
-              <ScrollArea ref={scrollRef} className="flex-1 p-4">
-                <div className="space-y-4">
-                  {messages.map((message, index) => (
-                    <div
-                      key={index}
-                      className={cn(
-                        "flex flex-col",
-                        message.role === "assistant"
-                          ? "items-start"
-                          : "items-end"
-                      )}
-                    >
+              <div className="flex-1 relative">
+                <ScrollArea className="absolute inset-0 p-4">
+                  <div className="space-y-4" ref={scrollRef}>
+                    {messages.map((message, index) => (
                       <div
+                        key={index}
                         className={cn(
-                          "max-w-[80%] rounded-lg px-3 py-2 text-sm",
+                          "flex flex-col",
                           message.role === "assistant"
-                            ? "bg-muted text-muted-foreground"
-                            : "bg-primary text-primary-foreground"
+                            ? "items-start"
+                            : "items-end"
                         )}
                       >
-                        {message.isLoading ? (
-                          <div className="flex items-center gap-2">
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                            <span>Thinking...</span>
-                          </div>
-                        ) : (
-                          message.content
-                        )}
+                        <div
+                          className={cn(
+                            "max-w-[80%] rounded-lg px-3 py-2 text-sm",
+                            message.role === "assistant"
+                              ? "bg-muted text-muted-foreground"
+                              : "bg-primary text-primary-foreground"
+                          )}
+                        >
+                          {message.isLoading ? (
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              <span>Thinking...</span>
+                            </div>
+                          ) : (
+                            message.content
+                          )}
+                        </div>
+                        <span className="text-[10px] text-muted-foreground mt-1">
+                          {message.timestamp.toLocaleTimeString()}
+                        </span>
                       </div>
-                      <span className="text-[10px] text-muted-foreground mt-1">
-                        {message.timestamp.toLocaleTimeString()}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </ScrollArea>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </div>
 
               <div className="p-4 border-t">
                 <div className="relative">

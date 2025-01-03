@@ -29,14 +29,25 @@ export const LineTracker = Extension.create({
               doc.forEach((node, _pos) => {
                 const existingLine = storage.lines.get(lineNumber);
                 
+                // Skip empty text nodes
+                if (node.type.name === 'text' && (!node.text || node.text.trim().length === 0)) {
+                  return;
+                }
+
+                // Ensure valid content
+                const content = node.textContent || ' ';
+                if (content.trim().length === 0) {
+                  return;
+                }
+                
                 const lineMetadata: LineMetadata = {
                   id: existingLine?.id || uuidv4(),
                   number: lineNumber,
-                  content: node.textContent,
+                  content,
                   type: getLineType(node),
                   attrs: node.type.name === 'heading' ? { level: node.attrs.level } : undefined,
                   timestamp: existingLine?.timestamp || new Date(),
-                  lastModified: existingLine?.content !== node.textContent 
+                  lastModified: existingLine?.content !== content 
                     ? new Date() 
                     : existingLine?.lastModified,
                   aiEnhanced: existingLine?.aiEnhanced || false,

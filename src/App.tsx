@@ -224,7 +224,7 @@ function App() {
             marginLeft: isSidebarCollapsed ? "3.5rem" : `${sidebarWidth}px`,
           }}
         >
-          <div className="relative h-full">
+          <div className="flex flex-col h-full">
             {hasFiles ? (
               <>
                 <Header
@@ -250,9 +250,13 @@ function App() {
                     }
                   }}
                 />
-                <BubbleMenu editor={editor} onEnhance={handleEnhance} />
-                <div className="h-[calc(100%-6rem)] overflow-y-auto">
-                  <EditorContent editor={editor} className="h-full" />
+                <div className="flex-1 min-h-0 relative">
+                  <div className="absolute inset-0 overflow-y-auto">
+                    <div className="min-h-full pb-[60px]">
+                      <BubbleMenu editor={editor} onEnhance={handleEnhance} />
+                      <EditorContent editor={editor} className="h-full" />
+                    </div>
+                  </div>
                 </div>
                 <Footer
                   lastSaved={lastSaved}
