@@ -7,6 +7,7 @@ Implementation Status:
 ✅ = Implemented
 🚧 = In Progress
 ⏳ = Pending
+🆕 = New Requirement
 
 ---
 
@@ -18,7 +19,8 @@ Implementation Status:
    ✅ React + TypeScript
    ✅ Tiptap for the editor
    ✅ shadcn UI components
-   ⏳ OpenAI (or similar) for AI-based enhancements
+   ✅ OpenAI for AI-based enhancements
+   🆕 Vector Database for embeddings
 
    The goal is to deliver a modern, minimal design text editor that seamlessly edits and previews HTML content, uses AI features for suggested improvements, and keeps everything in a single local file if the user chooses.
 
@@ -29,35 +31,63 @@ Implementation Status:
    ✅ Use shadcn components for a polished, cohesive look and feel
    ✅ Keep UI simple, focusing on the editor and preview
    ✅ All user content is stored in a single HTML file
-   🚧 Users can load and save changes locally
+   ✅ Users can load and save changes locally
    ✅ Rich-Text Editing with HTML
    ✅ Use Tiptap to provide formatting controls that map to HTML syntax
    ⏳ Provide inline preview
-   ⏳ AI Integration
+   ✅ AI Integration
    ⏳ Convert and save to Markdown/PDF/docx
+   🆕 Semantic search across files
+   🆕 Comprehensive edit history
 
 ---
 
 3. Key Features
    3.1 File Handling
-   🚧 Open HTML File
-   🚧 Save Content
+   ✅ Open HTML File
+   ✅ Save Content
+   🆕 File Indexing & Embeddings
 
-   3.2 Editor & Preview
-   ✅ Tiptap Editor
-   ✅ Rich text editing, but behind the scenes it's HTML
-   ✅ Tiptap's extension architecture to provide strong formatting options
-   ⏳ Live Preview
+   - Index files for semantic search
+   - Store embeddings locally
+   - Real-time index updates
 
-   3.3 AI Enhancement
-   ⏳ AI Processing
-   ⏳ Use Cases
+     3.2 Editor & Preview
+     ✅ Tiptap Editor
+     ✅ Rich text editing, but behind the scenes it's HTML
+     ✅ Tiptap's extension architecture to provide strong formatting options
+     ⏳ Live Preview
+     🆕 Enhanced History Features
 
-   3.4 Modern & Minimal UI
-   ✅ shadcn Components
-   ✅ Use a minimal navigation or toolbar
-   ✅ Keep spacing and styling consistent
-   ✅ Provide a dark/light mode option
+   - Track all document changes
+   - View change history with diffs
+   - Restore previous versions
+   - Filter history by type (AI vs manual)
+
+     3.3 AI Enhancement
+     ✅ AI Processing
+     ✅ Text Enhancement
+     ✅ Content Analysis
+     ✅ Smart Deletion
+     🆕 Advanced AI Features
+
+   - Context-aware suggestions
+   - Style matching
+   - Document summarization
+   - Semantic search across files
+   - Chat with document context
+
+     3.4 Modern & Minimal UI
+     ✅ shadcn Components
+     ✅ Use a minimal navigation or toolbar
+     ✅ Keep spacing and styling consistent
+     ✅ Provide a dark/light mode option
+     🆕 Enhanced History UI
+
+   - Timeline view of changes
+   - Diff viewer
+   - Change categorization
+   - Filter and search capabilities
 
 ---
 
@@ -70,121 +100,145 @@ Implementation Status:
    ✅ Install Tiptap
    ✅ Required packages
    ✅ Document Structure
+   🆕 History Extension
 
-   4.3 shadcn UI Components
-   ✅ Styling and Theming
-   ✅ Minimalist UI with well-spaced, well-styled buttons and layout
+   - Track all document changes
+   - Store change metadata
+   - Implement undo/redo stack
+   - Version control integration
 
-   4.4 Single File Management
-   🚧 Local File Storage
-   🚧 File parsing and writing
+     4.3 AI & Embeddings
+     ✅ OpenAI Integration
+     🆕 Vector Database
 
-   4.5 AI Integration
-   ⏳ API Calls
-   ⏳ Key Handling
-   ⏳ Enhancement Flow
+   - Local vector storage
+   - Efficient similarity search
+   - Real-time indexing
+   - Persistent storage
+     🆕 Enhanced Chat Features
+   - Document-aware context
+   - Multi-file knowledge
+   - Command parsing
+   - Structured responses
+
+     4.4 Data Management
+     ✅ Local File Storage
+     ✅ File parsing and writing
+     🆕 History Storage
+
+   - Efficient change tracking
+   - Metadata persistence
+   - Version management
+     🆕 Embeddings Storage
+   - Vector database integration
+   - Index management
+   - Cache optimization
 
 ---
 
 5. UX / UI Design
-   CORE DESIGN PRINCIPLES:
+   5.1 Main Layout
+   ✅ Contextual Formatting (Bubble Menu)
+   ✅ Modern Sidebar
+   ✅ Chat Interface
+   🆕 History Panel
 
-   - Ultra-minimal, compact, and modern design
-   - No traditional toolbars - contextual formatting only
-   - Full-height editor with optimal spacing
-   - Intuitive sidebar for file management
+   - Timeline visualization
+   - Change details
+   - Restore points
+   - Filter controls
 
-     5.1 Main Layout
-     ✅ Contextual Formatting (Bubble Menu)
-     🚧 Modern Sidebar
+     5.2 Editor Space
+     ✅ Full-height editor layout
+     ✅ Clean spacing
+     ✅ Smooth transitions
+     🆕 Change Indicators
 
-     - Recent files list with timestamps
-     - Quick file search/filter
-     - File tree navigation
-     - Collapsible for full-width editing
-     - Subtle hover states and animations
-     - File metadata preview
+   - Visual diff markers
+   - AI enhancement highlights
+   - Version comparison
 
-       5.2 Editor Space
-       🚧 Full-height editor layout
+     5.3 Chat & Search
+     ✅ Chat interface
+     ✅ Message history
+     🆕 Semantic Search
 
-     - Remove default double spacing
-     - Clean, single-line spacing
-     - Optimal padding for content
-     - Smooth transitions
-     - Minimal scrollbars
-
-       5.3 shadcn Styles
-       ✅ Button
-       ✅ Typography
-       ✅ Spacing
-       🚧 Modern Sidebar Components
-
-     - Custom scroll area
-     - Hover cards for file preview
-     - Command menu for quick actions
-     - Collapsible sections
-     - File icons and status indicators
+   - File browser integration
+   - Result previews
+   - Relevance scoring
+   - Cross-file search
 
 ---
 
 6. Architecture Overview
    ✅ Frontend (React + Tiptap)
-   🚧 HTML Processing
-   🚧 Tauri APIs
-   ⏳ AI Service
+   ✅ HTML Processing
+   ✅ Tauri APIs
+   ✅ AI Service
+   🆕 Vector Database
+   🆕 History Management
+   🆕 Search Engine
 
 ---
 
-7. Milestones & Timeline
-   M1: Project Setup (1 Week)
-   Initialize Tauri + React + TypeScript project.
-   Configure shadcn library.
-   Add Tiptap with basic editing.
-   M2: File Handling (1-2 Weeks)
-   Implement open/save dialogs with Tauri FS API.
-   Validate reading/writing .md files.
-   M3: Editor & Preview (1 Week)
-   Create or enable a live preview panel.
-   Ensure Tiptap's internal representation converts to HTML and vice versa.
-   M4: AI Integration (2 Weeks)
-   Integrate AI call with a simple "Enhance with AI" button.
-   Provide user with newly generated text.
-   M5: UI Polish (1-2 Weeks)
-   Use shadcn components for final design.
-   Add any final styling or theming tweaks.
-   Address usability issues and QA testing.
+7. Implementation Priorities
+   P0: Critical Features
+
+   - File embeddings and indexing
+   - Enhanced history tracking
+   - Semantic search implementation
+
+   P1: Important Features
+
+   - History UI improvements
+   - Version comparison
+   - Cross-file search
+
+   P2: Nice to Have
+
+   - Advanced AI features
+   - Timeline visualization
+   - Cache optimization
 
 ---
 
 8. Future Enhancements
    Multiple Tabs or Project Management
-   Manage multiple documents at once.
    Collaboration Features
-   Real-time collaboration via local network or cloud data.
    Plugin Ecosystem
-   Additional Tiptap extensions for embedding images, tables, etc.
    Version Control
-   Integration with Git for version history.
    HTML Linting
-   Automated linting suggestions for better structure.
+   🆕 Advanced AI Features
+   - Style transfer
+   - Document structure analysis
+   - Automated improvements
+     🆕 Enhanced Search
+   - Natural language queries
+   - Advanced filtering
+   - Custom embeddings models
 
 ---
 
-9. Constraints & Considerations
-   Storage
-   Currently storing all content in a single .md file; large files might cause performance issues.
-   AI Costs & Key Management
-   Using external AI providers means incurring usage costs.
-   Must store API keys securely.
-   Cross-Platform Differences
-   Tauri can build for Windows, Linux, and macOS. However, testing is needed on each.
-   Resource Usage
-   Tauri is generally lightweight, but AI calls can slow performance.
+9. Technical Considerations
+   Performance
+
+   - Efficient embedding generation
+   - Optimized vector search
+   - History storage optimization
+
    Security
-   Ensuring the user's data remains local by default (unless explicitly connecting to the AI API).
+
+   - Local data encryption
+   - API key management
+   - Safe file handling
+
+   Scalability
+
+   - Large file handling
+   - Multiple file indexing
+   - History size management
 
 ---
 
 Conclusion
-This PRD describes a minimal, modern HTML editor built with Tauri, shadcn for UI, and Tiptap for rich-text editing. The focus is on a clean interface, robust file handling, optional AI enhancements, and a single-file approach for content management. Following this plan ensures a concise, intuitive desktop application that retains future flexibility for advanced features.
+The project has evolved from a basic HTML editor to a sophisticated AI-enhanced writing tool with semantic search capabilities and comprehensive history tracking. The focus remains on maintaining a clean, efficient interface while adding powerful features that enhance the writing and editing experience.

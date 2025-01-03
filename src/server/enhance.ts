@@ -3,7 +3,15 @@ import cors from 'cors';
 import OpenAI from "openai";
 import dotenv from 'dotenv';
 import { LineMetadata } from "./types/editor";
-import { AssistantRequest, AssistantResponse, EditOperation, AnalyzeTextResponse, DeleteTextResponse } from './types/assistant';
+import { 
+  AssistantRequest, 
+  AssistantResponse, 
+  EditOperation, 
+  AnalyzeTextResponse, 
+  DeleteTextResponse,
+  EnhanceRequest,
+  EnhanceResponse 
+} from './types/assistant';
 import { parseCommand } from './utils/commandParser';
 
 dotenv.config();
@@ -38,7 +46,7 @@ app.post("/chat", async (req: Request<{}, any, AssistantRequest>, res) => {
 
     // Make the OpenAI API call
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",
@@ -77,6 +85,69 @@ app.post("/chat", async (req: Request<{}, any, AssistantRequest>, res) => {
     console.error('\n=== Chat Error ===');
     console.error('Full error:', error);
     res.status(500).json({ error: "Failed to process chat message" });
+  }
+});
+
+// Enhancement endpoint for direct text modifications
+app.post("/enhance", async (req: Request<{}, any, EnhanceRequest>, res) => {
+  const { selectedText, prompt, context, filename } = req.body;
+
+  console.log('\n=== Enhancement Request ===');
+  console.log('Selected Text:', selectedText);
+  console.log('Prompt:', prompt);
+  console.log('Context:', context);
+  console.log('Filename:', filename);
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert text editor and enhancer. Your task is to modify the provided text according to the user's prompt while maintaining:
+1. Consistent style and tone
+2. Proper grammar and punctuation
+3. Natural flow and readability
+4. Original meaning unless explicitly asked to change it
+
+Provide your response in JSON format with:
+- enhancedText: The modified text
+- explanation: Brief explanation of changes made
+- changes: Array of modifications made, each with type and description
+
+Rules:
+- Only modify what's necessary to fulfill the prompt
+- Preserve formatting unless asked to change it
+- Ensure the enhanced text can be seamlessly integrated back into the document
+- If the prompt is unclear, make minimal, safe improvements
+- Keep the same general length unless explicitly asked to expand/shorten`
+        },
+        {
+          role: "user",
+          content: `Selected text: "${selectedText}"
+          
+Enhancement prompt: "${prompt}"
+${context ? `Context: ${context}` : ''}
+${filename ? `File: ${filename}` : ''}`
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const response = JSON.parse(completion.choices[0].message.content || '{}') as EnhanceResponse;
+    
+    console.log('\n=== Enhancement Response ===');
+    console.log('Enhanced Text:', response.enhancedText);
+    console.log('Explanation:', response.explanation);
+    console.log('Changes:', response.changes);
+    console.log('================\n');
+
+    res.json(response);
+
+  } catch (error) {
+    console.error('\n=== Enhancement Error ===');
+    console.error('Error:', error);
+    res.status(500).json({ error: "Failed to enhance text" });
   }
 });
 

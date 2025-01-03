@@ -84,4 +84,20 @@ export interface AssistantRequest {
   selectedText?: string;
   fullContent: string;
   filename: string;
+}
+
+export interface EnhanceRequest {
+  selectedText: string;
+  prompt: string;
+  context?: string;
+  filename?: string;
+}
+
+export interface EnhanceResponse {
+  enhancedText: string;
+  explanation: string;
+  changes: {
+    type: 'addition' | 'deletion' | 'modification';
+    description: string;
+  }[];
 } 

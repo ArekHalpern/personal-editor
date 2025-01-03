@@ -14,6 +14,15 @@ import {
 import { useState, useRef, useEffect } from "react";
 import { cn } from "../lib/utils/cn";
 
+interface EnhanceResponse {
+  enhancedText: string;
+  explanation: string;
+  changes: Array<{
+    type: "addition" | "deletion" | "modification";
+    description: string;
+  }>;
+}
+
 interface BubbleMenuProps {
   editor: Editor;
   onEnhance?: (original: string, enhanced: string, prompt: string) => void;
@@ -77,7 +86,13 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
       " "
     );
 
-    const fullContent = editor.getHTML();
+    // Get surrounding context (one paragraph before and after)
+    const doc = editor.state.doc;
+    const pos = selectionRef.current.from;
+    const resolvedPos = doc.resolve(pos);
+    const paragraph = resolvedPos.parent;
+    const context = paragraph.textContent;
+
     setIsEnhancing(true);
 
     try {
@@ -88,14 +103,21 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
         },
         body: JSON.stringify({
           selectedText,
-          fullContent,
           prompt: customPrompt,
+          context,
+          filename: window.location.pathname.split("/").pop() || undefined,
         }),
       });
 
-      if (!response.ok) throw new Error("Enhancement failed");
+      if (!response.ok) {
+        throw new Error(`Enhancement failed: ${response.statusText}`);
+      }
 
-      const { enhancedText } = await response.json();
+      const data = (await response.json()) as EnhanceResponse;
+
+      if (!data.enhancedText) {
+        throw new Error("No enhanced text received");
+      }
 
       // Restore selection before inserting
       editor.commands.setTextSelection({
@@ -103,17 +125,31 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
         to: selectionRef.current.to,
       });
 
-      editor.chain().focus().insertContent(enhancedText).run();
+      // Insert the enhanced text
+      editor.chain().focus().insertContent(data.enhancedText).run();
 
-      // Update history in the RightBar
-      onEnhance?.(selectedText, enhancedText, customPrompt);
+      // Update history in the RightBar with explanation
+      onEnhance?.(
+        selectedText,
+        data.enhancedText,
+        `${customPrompt}\n\nChanges made:\n${data.changes
+          .map((change) => `- ${change.type}: ${change.description}`)
+          .join("\n")}`
+      );
 
       // Reset states
       setPrompt("");
       setShowPrompt(false);
       selectionRef.current = null;
+
+      // Remove enhancing class
+      const editorElement = document.querySelector(".ProseMirror");
+      if (editorElement) {
+        editorElement.classList.remove("enhancing");
+      }
     } catch (error) {
       console.error("Error enhancing text:", error);
+      // You might want to show this error to the user in a toast or notification
     } finally {
       setIsEnhancing(false);
     }
