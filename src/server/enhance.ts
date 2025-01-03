@@ -55,6 +55,7 @@ app.post("/chat", async (req: Request<{}, any, AssistantRequest>, res) => {
         {
           role: "user",
           content: `Request: "${message}"\n\n` +
+            `Filename: ${filename}\n\n` +
             `Document Content:\n${fullContent}\n\n` +
             `${selectedText ? `Selected Text:\n${selectedText}\n\n` : ''}` +
             `Lines to Consider:\n${JSON.stringify(targetLines, null, 2)}`
@@ -153,7 +154,7 @@ ${filename ? `File: ${filename}` : ''}`
 
 function getSystemPrompt(operation: EditOperation, filename: string, isFileQuery?: boolean): string {
   const basePrompt = `You are a precise document editor working on "${filename}". `;
-  const responseFormat = 'Respond in JSON format following the specified structure for each operation type.';
+  const responseFormat = 'Respond in JSON format following the specified structure for each operation type.\n\nIMPORTANT: Always use type: "paragraph" for all content. Never use headers or list items.';
   
   const operationPrompts: Record<EditOperation, string> = {
     'inline_edit': basePrompt + 
@@ -163,14 +164,14 @@ function getSystemPrompt(operation: EditOperation, filename: string, isFileQuery
       '2. Preserve the original meaning\n' +
       '3. Maintain consistent style\n' +
       '4. Never include HTML tags\n' +
-      '5. Preserve existing formatting (headers, paragraphs, etc.)\n' +
-      '6. Only change content, not structure unless explicitly requested\n\n' +
+      '5. Always use paragraphs, never headers or lists\n' +
+      '6. Only change content, not structure\n\n' +
       responseFormat + '\n' +
       'JSON Response Structure:\n' +
       '{\n' +
       '  "operation": "inline_edit",\n' +
       '  "message": "Description of changes",\n' +
-      '  "changes": [{ "lineNumber": number, "content": string, "type": "heading" | "paragraph" | "list-item", "attrs": { "level": 1 | 2 } }]\n' +
+      '  "changes": [{ "lineNumber": number, "content": string, "type": "paragraph" }]\n' +
       '}',
 
     'multi_line_edit': basePrompt +
@@ -180,14 +181,14 @@ function getSystemPrompt(operation: EditOperation, filename: string, isFileQuery
       '2. Preserve line numbers and relationships\n' +
       '3. Maintain document flow\n' +
       '4. Never include HTML tags\n' +
-      '5. Preserve existing formatting (headers, paragraphs, etc.)\n' +
-      '6. Only change content, not structure unless explicitly requested\n\n' +
+      '5. Always use paragraphs, never headers or lists\n' +
+      '6. Only change content, not structure\n\n' +
       responseFormat + '\n' +
       'JSON Response Structure:\n' +
       '{\n' +
       '  "operation": "multi_line_edit",\n' +
       '  "message": "Description of changes",\n' +
-      '  "changes": [{ "lineNumber": number, "content": string, "type": "heading" | "paragraph" | "list-item", "attrs": { "level": 1 | 2 } }]\n' +
+      '  "changes": [{ "lineNumber": number, "content": string, "type": "paragraph" }]\n' +
       '}',
 
     'continue_text': basePrompt +
@@ -196,13 +197,15 @@ function getSystemPrompt(operation: EditOperation, filename: string, isFileQuery
       '1. Match existing style and tone\n' +
       '2. Add meaningful content\n' +
       '3. Maintain natural flow\n' +
-      '4. Never include HTML tags\n\n' +
+      '4. Never include HTML tags\n' +
+      '5. Always use paragraphs, never headers or lists\n' +
+      '6. IMPORTANT: When a specific number of lines is requested (e.g., "add 5 lines"), you MUST generate exactly that number of lines\n\n' +
       responseFormat + '\n' +
       'JSON Response Structure:\n' +
       '{\n' +
       '  "operation": "continue_text",\n' +
       '  "message": "Description of continuation",\n' +
-      '  "newLines": [{ "content": string, "type": "heading" | "paragraph" | "list-item", "attrs": { "level": 1 | 2 } }],\n' +
+      '  "newLines": [{ "content": string, "type": "paragraph" }],\n' +
       '  "afterLine": number\n' +
       '}',
 
@@ -324,6 +327,17 @@ async function processResponse(
       };
 
     case 'continue_text':
+      // Extract number from message if it exists (e.g., "add 5 lines")
+      const requestedLines = parseInt(response.message.match(/add (\d+) lines?/i)?.[1] || '0');
+      
+      // If a specific number was requested but not met, return an error
+      if (requestedLines > 0 && response.newLines.length !== requestedLines) {
+        return {
+          message: `Error: Requested ${requestedLines} lines but received ${response.newLines.length}. Please try again.`,
+          error: true
+        };
+      }
+
       const newLines = response.newLines.map((line, index) => ({
         content: line.content.replace(/<[^>]*>/g, ''),
         type: line.type,

@@ -70,9 +70,6 @@ export const LineTracker = Extension.create({
 
 // Get the line type based on node type and attributes
 const getLineType = (node: any): LineMetadata['type'] => {
-  if (node.type.name === 'heading') {
-    return 'heading';
-  }
   if (node.type.name === 'bulletList' || node.type.name === 'listItem') {
     return 'list-item';
   }

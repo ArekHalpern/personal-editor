@@ -76,7 +76,7 @@ export const editorConfig = {
   editorProps: {
     attributes: {
       class:
-        "prose prose-sm prose-stone dark:prose-invert focus:outline-none h-full",
+        "prose prose-base prose-stone dark:prose-invert focus:outline-none h-full",
     },
     handleDOMEvents: {
       blur: () => {

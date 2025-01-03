@@ -18,7 +18,7 @@ export interface InlineEditResponse extends BaseResponse {
   changes: Array<{
     lineNumber: number;
     content: string;
-    type: 'paragraph' | 'list-item';
+    type: 'paragraph';
   }>;
 }
 
@@ -27,7 +27,7 @@ export interface MultiLineEditResponse extends BaseResponse {
   changes: Array<{
     lineNumber: number;
     content: string;
-    type: 'paragraph' | 'list-item';
+    type: 'paragraph';
   }>;
 }
 
@@ -35,7 +35,7 @@ export interface ContinueTextResponse extends BaseResponse {
   operation: 'continue_text';
   newLines: Array<{
     content: string;
-    type: 'paragraph' | 'list-item';
+    type: 'paragraph';
   }>;
   afterLine: number;
 }

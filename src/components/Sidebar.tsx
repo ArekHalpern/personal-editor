@@ -19,6 +19,12 @@ import { useSidebarUI } from "../lib/hooks/useSidebarUI";
 import { FileService } from "../lib/utils/filesystem/fileService";
 import { FileTreeItem } from "./FileTreeItem";
 import { SettingsDialog } from "./ui/settings-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
 
 interface SidebarProps {
   className?: string;
@@ -148,107 +154,129 @@ export const Sidebar = React.forwardRef<
     });
 
     return (
-      <div
-        className={cn(
-          "group/sidebar fixed top-0 left-0 flex h-screen flex-col border-r",
-          "bg-muted/50 dark:bg-muted/50 backdrop-blur supports-[backdrop-filter]:bg-muted/50",
-          isCollapsed && "w-14 transition-[width] duration-300 ease-in-out",
-          className
-        )}
-        style={!isCollapsed ? { width: `${width}px` } : undefined}
-      >
-        {!isCollapsed && (
-          <ResizeHandle onResize={handleResize} className="bottom-9" />
-        )}
-        <div className="flex items-center justify-between p-2 border-b">
-          {!isCollapsed && (
-            <span className="text-xs font-medium px-2">Files</span>
+      <TooltipProvider>
+        <div
+          className={cn(
+            "group/sidebar fixed top-0 left-0 flex h-screen flex-col border-r",
+            "bg-muted/50 dark:bg-muted/50 backdrop-blur supports-[backdrop-filter]:bg-muted/50",
+            isCollapsed && "w-14 transition-[width] duration-300 ease-in-out",
+            className
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            onClick={onToggle}
-          >
-            {isCollapsed ? (
-              <PanelLeft className="h-4 w-4" />
-            ) : (
-              <PanelLeftClose className="h-4 w-4" />
+          style={!isCollapsed ? { width: `${width}px` } : undefined}
+        >
+          {!isCollapsed && (
+            <ResizeHandle onResize={handleResize} className="bottom-9" />
+          )}
+          <div className="flex items-center justify-between p-2 border-b">
+            {!isCollapsed && (
+              <span className="text-xs font-medium px-2">Files</span>
             )}
-          </Button>
-        </div>
-        {!isCollapsed && (
-          <div className="flex flex-col h-[calc(100%-3.5rem)]">
-            <div className="flex items-center gap-2 px-4 py-2">
-              <Search className="h-3 w-3 text-muted-foreground" />
-              <Input
-                className="h-7 text-xs"
-                placeholder="Search files..."
-                value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2 px-4 py-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2 text-xs h-7"
-                onClick={handleCreateNewFile}
-              >
-                <FilePlus className="h-3 w-3" />
-                New File
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full justify-start gap-2 text-xs h-7"
-                onClick={handleCreateNewFolder}
-              >
-                <FolderPlus className="h-3 w-3" />
-                New Folder
-              </Button>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <div className="pb-12">
-                {filteredFiles.map((file) => (
-                  <FileTreeItem
-                    key={file.path}
-                    item={file}
-                    level={0}
-                    activeFile={activeFile}
-                    editingFile={editingFile}
-                    editingName={editingName}
-                    onSelect={handleFileSelect}
-                    onDelete={deleteFile}
-                    onRename={handleRename}
-                    onRenameSubmit={handleRenameSubmit}
-                    setEditingFile={setEditingFile}
-                    setEditingName={setEditingName}
-                    onMoveFile={handleMoveFile}
-                    allFolders={allFolders}
-                  />
-                ))}
-              </div>
-            </div>
-            <div className="flex-shrink-0 border-t py-1 px-4">
-              <div className="flex items-center justify-left">
-                {!isCollapsed && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => setShowSettings(true)}
-                  >
-                    <Settings className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={onToggle}
+                >
+                  {isCollapsed ? (
+                    <PanelLeft className="h-4 w-4" />
+                  ) : (
+                    <PanelLeftClose className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              </TooltipContent>
+            </Tooltip>
           </div>
-        )}
+          {!isCollapsed && (
+            <div className="flex flex-col h-[calc(100%-3.5rem)]">
+              <div className="flex items-center gap-2 px-4 py-2">
+                <Search className="h-3 w-3 text-muted-foreground" />
+                <Input
+                  className="h-7 text-xs"
+                  placeholder="Search files..."
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-1 px-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={handleCreateNewFile}
+                    >
+                      <FilePlus className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>New file</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={handleCreateNewFolder}
+                    >
+                      <FolderPlus className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>New folder</TooltipContent>
+                </Tooltip>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <div className="pb-12">
+                  {filteredFiles.map((file) => (
+                    <FileTreeItem
+                      key={file.path}
+                      item={file}
+                      level={0}
+                      activeFile={activeFile}
+                      editingFile={editingFile}
+                      editingName={editingName}
+                      onSelect={handleFileSelect}
+                      onDelete={deleteFile}
+                      onRename={handleRename}
+                      onRenameSubmit={handleRenameSubmit}
+                      setEditingFile={setEditingFile}
+                      setEditingName={setEditingName}
+                      onMoveFile={handleMoveFile}
+                      allFolders={allFolders}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div className="flex-shrink-0 border-t py-1 px-4">
+                <div className="flex items-center justify-left">
+                  {!isCollapsed && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => setShowSettings(true)}
+                        >
+                          <Settings className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Settings</TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
-        <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
-      </div>
+          <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
+        </div>
+      </TooltipProvider>
     );
   }
 );

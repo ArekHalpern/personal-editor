@@ -12,8 +12,10 @@ import { AUTO_SAVE_DELAY } from "./lib/constants";
 import { editorConfig, EnhancementHistoryItem } from "./lib/types/editor";
 import { Header } from "./components/Header";
 import { FileService } from "./lib/utils/filesystem/fileService";
+import { useSettings } from "./lib/stores/settings";
 
 function App() {
+  const { settings } = useSettings();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isRightBarCollapsed, setIsRightBarCollapsed] = useState(false);
   const [currentFile, setCurrentFile] = useState<string>("untitled.html");
@@ -200,6 +202,20 @@ function App() {
       console.error("Error creating file:", error);
     }
   };
+
+  // Apply editor settings
+  useEffect(() => {
+    if (settings.editor) {
+      document.documentElement.style.setProperty(
+        "--editor-font-size",
+        `${settings.editor.fontSize}px`
+      );
+      document.documentElement.style.setProperty(
+        "--editor-line-height",
+        String(settings.editor.lineHeight)
+      );
+    }
+  }, [settings.editor]);
 
   if (!editor) {
     return null;

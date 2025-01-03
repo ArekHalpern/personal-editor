@@ -1,9 +1,12 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
  
 @layer base {
   :root {
+    --font-sans: 'Roboto', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --background: 0 0% 100%;
     --foreground: 20 14.3% 4.1%;
     --card: 0 0% 100%;
@@ -24,6 +27,8 @@
     --input: 20 5.9% 90%;
     --ring: 20 14.3% 4.1%;
     --radius: 0.5rem;
+    --editor-font-size: 16px;
+    --editor-line-height: 1.5;
   }
 
   .dark {
@@ -124,7 +129,7 @@
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground antialiased font-sans;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
@@ -132,9 +137,11 @@
 @layer components {
   /* Editor Styles */
   .ProseMirror {
-    @apply min-h-full outline-none leading-tight;
-    padding: 1rem 1rem !important;
-    padding-left: 3.5rem !important;
+    @apply min-h-full outline-none;
+    font-size: var(--editor-font-size);
+    line-height: var(--editor-line-height);
+    padding: 1.25rem 1.25rem !important;
+    padding-left: 3.75rem !important;
   }
 
   /* Bubble Menu Styles */
@@ -252,7 +259,8 @@
 
   .prose p {
     @apply my-0 !important;
-    line-height: 1.2 !important;
+    font-size: var(--editor-font-size) !important;
+    line-height: var(--editor-line-height) !important;
   }
 
   .prose > :first-child {

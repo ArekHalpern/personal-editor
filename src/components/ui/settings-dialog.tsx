@@ -10,6 +10,7 @@ import { Switch } from "./switch";
 import { useSettings } from "../../lib/stores/settings";
 import { Separator } from "./separator";
 import { ThemeToggle } from "../theme-toggle";
+import { Slider } from "./slider";
 
 interface SettingsDialogProps {
   open: boolean;
@@ -17,7 +18,7 @@ interface SettingsDialogProps {
 }
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
-  const { settings, updateConfirmation } = useSettings();
+  const { settings, updateSettings, updateConfirmation } = useSettings();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -31,9 +32,57 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         <div className="space-y-6">
           <div>
             <h3 className="text-sm font-medium mb-4">Appearance</h3>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Color Theme</span>
-              <ThemeToggle />
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">
+                  Color Theme
+                </span>
+                <ThemeToggle />
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Font Size
+                    </span>
+                    <span className="text-sm text-muted-foreground w-12 text-right">
+                      {settings.editor?.fontSize}px
+                    </span>
+                  </div>
+                  <Slider
+                    value={[settings.editor?.fontSize || 16]}
+                    min={12}
+                    max={24}
+                    step={1}
+                    onValueChange={([value]) =>
+                      updateSettings({
+                        editor: { ...settings.editor, fontSize: value },
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Line Height
+                    </span>
+                    <span className="text-sm text-muted-foreground w-12 text-right">
+                      {settings.editor?.lineHeight}
+                    </span>
+                  </div>
+                  <Slider
+                    value={[settings.editor?.lineHeight || 1.5]}
+                    min={1}
+                    max={2}
+                    step={0.1}
+                    onValueChange={([value]) =>
+                      updateSettings({
+                        editor: { ...settings.editor, lineHeight: value },
+                      })
+                    }
+                  />
+                </div>
+              </div>
             </div>
           </div>
 

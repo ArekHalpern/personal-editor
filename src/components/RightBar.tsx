@@ -191,18 +191,12 @@ export function RightBar({
         // Update editor content
         editor.commands.setContent("");
         data.enhancedText.lines.forEach((line) => {
-          const nodeType = line.type === "heading1" ? "heading" : line.type;
-          const attrs = line.type.startsWith("heading")
-            ? { level: parseInt(line.type.slice(-1)) }
-            : {};
-
           editor
             .chain()
             .focus()
             .insertContent([
               {
-                type: nodeType,
-                attrs,
+                type: "paragraph",
                 content: [
                   {
                     type: "text",
