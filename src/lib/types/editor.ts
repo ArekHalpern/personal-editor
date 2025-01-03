@@ -1,6 +1,7 @@
 import StarterKit from "@tiptap/starter-kit";
 import BubbleMenuExtension from "@tiptap/extension-bubble-menu";
 import Placeholder from "@tiptap/extension-placeholder";
+import Heading from "@tiptap/extension-heading";
 import { PLACEHOLDER_TEXT } from "../constants";
 import { LineTracker } from "../extensions/lineTracker";
 import { EditorView } from "prosemirror-view";
@@ -51,6 +52,9 @@ export const editorConfig = {
   extensions: [
     StarterKit.configure({
       heading: false,
+    }),
+    Heading.configure({
+      levels: [2],
     }),
     BubbleMenuExtension.configure({
       shouldShow: ({ editor, state }) => {

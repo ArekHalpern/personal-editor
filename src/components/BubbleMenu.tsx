@@ -4,12 +4,11 @@ import { Input } from "./ui/input";
 import {
   Bold,
   Italic,
-  Heading1,
   Heading2,
   List,
-  Code,
   Sparkles,
   X,
+  CornerDownLeft,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { cn } from "../lib/utils/cn";
@@ -34,11 +33,6 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
   const [prompt, setPrompt] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const selectionRef = useRef<{ from: number; to: number } | null>(null);
-
-  // Add function to check if selection is within H1
-  const isWithinH1 = () => {
-    return editor.isActive("heading", { level: 1 });
-  };
 
   // Store selection when showing prompt
   const handleShowPrompt = () => {
@@ -205,7 +199,6 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
             "hover:bg-accent/50",
             editor.isActive("bold") ? "active-item" : ""
           )}
-          disabled={isWithinH1()}
         >
           <Bold className="h-4 w-4" />
         </Button>
@@ -217,22 +210,8 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
             "hover:bg-accent/50",
             editor.isActive("italic") ? "active-item" : ""
           )}
-          disabled={isWithinH1()}
         >
           <Italic className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() =>
-            editor.chain().focus().toggleHeading({ level: 1 }).run()
-          }
-          className={cn(
-            "hover:bg-accent/50",
-            editor.isActive("heading", { level: 1 }) ? "active-item" : ""
-          )}
-        >
-          <Heading1 className="h-4 w-4" />
         </Button>
         <Button
           variant="ghost"
@@ -244,7 +223,6 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
             "hover:bg-accent/50",
             editor.isActive("heading", { level: 2 }) ? "active-item" : ""
           )}
-          disabled={isWithinH1()}
         >
           <Heading2 className="h-4 w-4" />
         </Button>
@@ -256,21 +234,8 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
             "hover:bg-accent/50",
             editor.isActive("bulletList") ? "active-item" : ""
           )}
-          disabled={isWithinH1()}
         >
           <List className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => editor.chain().focus().toggleCode().run()}
-          className={cn(
-            "hover:bg-accent/50",
-            editor.isActive("code") ? "active-item" : ""
-          )}
-          disabled={isWithinH1()}
-        >
-          <Code className="h-4 w-4" />
         </Button>
         {!showPrompt && (
           <Button
@@ -278,7 +243,6 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
             size="sm"
             onClick={handleShowPrompt}
             className={cn("gap-1 hover:bg-accent/50")}
-            disabled={isWithinH1()}
           >
             <Sparkles className="h-4 w-4" />
           </Button>
@@ -309,7 +273,7 @@ export function BubbleMenu({ editor, onEnhance }: BubbleMenuProps) {
             }}
             className="px-2 hover:bg-accent/50"
           >
-            <Sparkles className="h-4 w-4" />
+            <CornerDownLeft className="h-4 w-4" />
             {isEnhancing ? "..." : ""}
           </Button>
           <Button
