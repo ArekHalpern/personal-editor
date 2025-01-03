@@ -1,13 +1,14 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { ThemeToggle } from "./theme-toggle";
+
 import {
   PanelLeftClose,
   PanelLeft,
   Search,
   FilePlus,
   FolderPlus,
+  Settings,
 } from "lucide-react";
 import { cn } from "../lib/utils/cn";
 import { ResizeHandle } from "./ui/resize-handle";
@@ -17,6 +18,7 @@ import { useFileOperations } from "../lib/hooks/useFileOperations";
 import { useSidebarUI } from "../lib/hooks/useSidebarUI";
 import { FileService } from "../lib/utils/filesystem/fileService";
 import { FileTreeItem } from "./FileTreeItem";
+import { SettingsDialog } from "./ui/settings-dialog";
 
 interface SidebarProps {
   className?: string;
@@ -47,6 +49,7 @@ export const Sidebar = React.forwardRef<
     },
     ref
   ) => {
+    const [showSettings, setShowSettings] = useState(false);
     const {
       recentFiles,
       editingFile,
@@ -147,7 +150,7 @@ export const Sidebar = React.forwardRef<
     return (
       <div
         className={cn(
-          "fixed top-0 left-0 flex h-screen flex-col border-r bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-30",
+          "group/sidebar fixed top-0 left-0 flex h-screen flex-col border-r bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-30",
           isCollapsed && "w-14 transition-[width] duration-300 ease-in-out",
           className
         )}
@@ -226,11 +229,24 @@ export const Sidebar = React.forwardRef<
                 ))}
               </div>
             </div>
-            <div className="flex-shrink-0 border-t py-2 px-4">
-              <ThemeToggle />
+            <div className="flex-shrink-0 border-t py-1 px-4">
+              <div className="flex items-center justify-left">
+                {!isCollapsed && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => setShowSettings(true)}
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         )}
+
+        <SettingsDialog open={showSettings} onOpenChange={setShowSettings} />
       </div>
     );
   }

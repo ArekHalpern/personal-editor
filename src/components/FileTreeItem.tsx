@@ -10,6 +10,8 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "../components/ui/context-menu";
+import { ConfirmDialog } from "./ui/confirm-dialog";
+import { useSettings } from "../lib/stores/settings";
 
 interface FileTreeItemProps {
   item: FileItem;
@@ -43,7 +45,9 @@ export function FileTreeItem({
   allFolders,
 }: FileTreeItemProps) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const contextMenuTriggerRef = useRef<HTMLDivElement>(null);
+  const { settings } = useSettings();
 
   const isActive =
     item.path ===
@@ -52,15 +56,26 @@ export function FileTreeItem({
 
   const handleDelete = (e?: React.MouseEvent) => {
     e?.stopPropagation();
-    if (
-      confirm(
-        `Are you sure you want to delete ${
-          item.isDirectory ? "folder" : "file"
-        } "${item.name}"?`
-      )
-    ) {
+    if (settings.confirmations.fileDelete) {
+      setShowDeleteDialog(true);
+    } else {
       onDelete(item.path);
     }
+  };
+
+  const handleConfirmDelete = (neverAskAgain: boolean) => {
+    if (neverAskAgain) {
+      useSettings.setState((state) => ({
+        settings: {
+          ...state.settings,
+          confirmations: {
+            ...state.settings.confirmations,
+            fileDelete: false,
+          },
+        },
+      }));
+    }
+    onDelete(item.path);
   };
 
   const handleRename = (e?: React.MouseEvent) => {
@@ -187,6 +202,17 @@ export function FileTreeItem({
           )}
         </ContextMenuContent>
       </ContextMenu>
+
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        title="Delete Confirmation"
+        description={`Are you sure you want to delete ${
+          item.isDirectory ? "folder" : "file"
+        } "${item.name}"?`}
+        onConfirm={handleConfirmDelete}
+      />
+
       {item.isDirectory && isExpanded && item.children && (
         <div className="flex flex-col">
           {item.children.map((child) => (

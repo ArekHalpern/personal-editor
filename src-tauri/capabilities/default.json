@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-capability",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "fs:default",
     "dialog:default",
@@ -11,19 +13,36 @@
     "dialog:allow-message",
     {
       "identifier": "fs:allow-app-write-recursive",
-      "allow": [{ "path": "$APPDATA/ai-editor-files/**" }]
+      "allow": [
+        {
+          "path": "$APPDATA/ai-editor-files/**"
+        }
+      ]
     },
     {
       "identifier": "fs:allow-app-read-recursive",
-      "allow": [{ "path": "$APPDATA/ai-editor-files/**" }]
+      "allow": [
+        {
+          "path": "$APPDATA/ai-editor-files/**"
+        }
+      ]
     },
     {
       "identifier": "fs:allow-app-meta-recursive",
-      "allow": [{ "path": "$APPDATA/ai-editor-files/**" }]
+      "allow": [
+        {
+          "path": "$APPDATA/ai-editor-files/**"
+        }
+      ]
     },
     {
       "identifier": "fs:scope-app-recursive",
-      "allow": [{ "path": "$APPDATA/ai-editor-files/**" }]
-    }
+      "allow": [
+        {
+          "path": "$APPDATA/ai-editor-files/**"
+        }
+      ]
+    },
+    "shell:default"
   ]
 }

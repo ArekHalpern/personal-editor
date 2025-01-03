@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { FileService } from "../utils/filesystem/fileService";
 import { FileItem } from "../types/file";
-import { ask } from "@tauri-apps/plugin-dialog";
 import { getDisplayName } from "../utils/string";
 import { Editor } from "@tiptap/react";
 
@@ -21,12 +20,24 @@ export function useFileOperations({
   const [recentFiles, setRecentFiles] = useState<FileItem[]>([]);
   const [editingFile, setEditingFile] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   const loadFiles = async () => {
     try {
       const files = await FileService.loadFiles();
       setRecentFiles(files);
       onFilesLoaded(files);
+
+      // If this is the initial load and there are no files, create one
+      if (isInitialLoad && files.length === 0) {
+        setIsInitialLoad(false);
+        const { fileName, content } = await FileService.createNewFile();
+        onFileSelect(content, fileName);
+        // Reload files to show the new file
+        const updatedFiles = await FileService.loadFiles();
+        setRecentFiles(updatedFiles);
+        onFilesLoaded(updatedFiles);
+      }
     } catch (error) {
       console.error("Error loading files:", error);
     }
@@ -44,31 +55,25 @@ export function useFileOperations({
   };
 
   const deleteFile = async (path: string) => {
-    const confirmed = await ask("Are you sure you want to delete this file?", {
-      title: "Delete File",
-    });
+    try {
+      await FileService.deleteFile(path);
+      await loadFiles();
 
-    if (confirmed) {
-      try {
-        await FileService.deleteFile(path);
-        await loadFiles();
-
-        // If we're deleting the active file, clear the editor
-        if (path === activeFile && editor) {
-          editor.commands.clearContent();
-          // Load the most recent file if available
-          const files = await FileService.loadFiles();
-          if (files.length > 0) {
-            const content = await FileService.readFile(files[0].path);
-            onFileSelect(content, files[0].path);
-          } else {
-            // If no files left, clear the editor and notify parent
-            onFileSelect("", "untitled.html");
-          }
+      // If we're deleting the active file, clear the editor
+      if (path === activeFile && editor) {
+        editor.commands.clearContent();
+        // Load the most recent file if available
+        const files = await FileService.loadFiles();
+        if (files.length > 0) {
+          const content = await FileService.readFile(files[0].path);
+          onFileSelect(content, files[0].path);
+        } else {
+          // If no files left, clear the editor and notify parent
+          onFileSelect("", "untitled.html");
         }
-      } catch (error) {
-        console.error("Error deleting file:", error);
       }
+    } catch (error) {
+      console.error("Error deleting file:", error);
     }
   };
 
