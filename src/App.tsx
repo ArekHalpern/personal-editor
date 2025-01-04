@@ -64,18 +64,24 @@ function App() {
 
         try {
           setIsSaving(true);
+          console.log("💾 Saving File:", {
+            filePath,
+            contentLength: content.length,
+            isRename,
+            timestamp: new Date().toISOString(),
+          });
 
           await FileService.writeFile(filePath, content);
 
           setLastSaved(new Date());
-          console.log("File saved successfully:", filePath);
+          console.log("✅ File saved successfully:", filePath);
 
           // Only refresh sidebar if this was a rename operation
           if (isRename) {
             await sidebarRef.current?.loadFiles();
           }
         } catch (error) {
-          console.error("Error saving file:", {
+          console.error("❌ Error saving file:", {
             error,
             filePath,
             fullPath: FileService.getFullPath(filePath),
@@ -120,8 +126,41 @@ function App() {
 
     const handleUpdate = async () => {
       if (!hasFiles || !currentFile) return;
+
+      const content = editor.getHTML();
+      console.log("📝 Editor Update:", {
+        currentFile,
+        contentLength: content.length,
+        lineCount: editor.state.doc.childCount,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Log the document structure
+      interface DocumentLine {
+        type: string;
+        content: string;
+        isEmptyLine: boolean;
+        position: number;
+      }
+
+      const lines: DocumentLine[] = [];
+      editor.state.doc.forEach((node, offset) => {
+        lines.push({
+          type: node.type.name,
+          content: node.textContent,
+          isEmptyLine: !node.textContent.trim().length,
+          position: offset,
+        });
+      });
+      console.log("📄 Document Structure:", {
+        totalLines: lines.length,
+        emptyLines: lines.filter((l) => l.isEmptyLine).length,
+        contentLines: lines.filter((l) => !l.isEmptyLine).length,
+        lines,
+      });
+
       // Just do a normal save
-      debouncedSaveRef.current(currentFile, editor.getHTML());
+      debouncedSaveRef.current(currentFile, content);
     };
 
     const debouncedUpdate = debounce(handleUpdate, AUTO_SAVE_DELAY);

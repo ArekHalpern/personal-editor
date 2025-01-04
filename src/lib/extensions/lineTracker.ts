@@ -29,17 +29,25 @@ export const LineTracker = Extension.create({
               doc.forEach((node, _pos) => {
                 const existingLine = storage.lines.get(lineNumber);
                 
-                // Skip empty text nodes
+                // Handle empty text nodes
                 if (node.type.name === 'text' && (!node.text || node.text.trim().length === 0)) {
+                  const lineMetadata: LineMetadata = {
+                    id: existingLine?.id || uuidv4(),
+                    number: lineNumber,
+                    content: ' ',
+                    type: 'paragraph',
+                    timestamp: existingLine?.timestamp || new Date(),
+                    lastModified: existingLine?.lastModified || new Date(),
+                    aiEnhanced: existingLine?.aiEnhanced || false,
+                    aiMetadata: existingLine?.aiMetadata,
+                  };
+                  newLines.set(lineNumber, lineMetadata);
+                  lineNumber++;
                   return;
                 }
 
-                // Ensure valid content
+                // Handle all other nodes
                 const content = node.textContent || ' ';
-                if (content.trim().length === 0) {
-                  return;
-                }
-                
                 const lineMetadata: LineMetadata = {
                   id: existingLine?.id || uuidv4(),
                   number: lineNumber,
