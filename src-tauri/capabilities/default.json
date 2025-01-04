@@ -2,6 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-capability",
   "description": "Capability for the main window",
+  "local": true,
   "windows": [
     "main"
   ],
@@ -11,6 +12,20 @@
     "dialog:allow-ask",
     "dialog:allow-confirm",
     "dialog:allow-message",
+    "shell:default",
+    "shell:allow-open",
+    "core:path:default",
+    "core:path:allow-resolve-directory",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [{
+        "name": "reveal",
+        "cmd": "/usr/bin/open",
+        "args": ["-R", {
+          "validator": ".*"
+        }]
+      }]
+    },
     {
       "identifier": "fs:allow-app-write-recursive",
       "allow": [
@@ -42,7 +57,6 @@
           "path": "$APPDATA/ai-editor-files/**"
         }
       ]
-    },
-    "shell:default"
+    }
   ]
 }

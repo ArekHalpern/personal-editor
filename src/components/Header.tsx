@@ -13,7 +13,10 @@ export function Header({ onTitleChange, currentFile }: HeaderProps) {
   // Only update title from currentFile
   useEffect(() => {
     if (!isEditing && currentFile) {
-      const displayName = getDisplayName(currentFile);
+      // Get just the file name without the directory path
+      const pathParts = currentFile.split("/");
+      const fileName = pathParts[pathParts.length - 1];
+      const displayName = getDisplayName(fileName);
       setTitle(displayName);
     }
   }, [currentFile, isEditing]);
@@ -26,7 +29,9 @@ export function Header({ onTitleChange, currentFile }: HeaderProps) {
   const handleTitleBlur = () => {
     setIsEditing(false);
     // Only trigger title change if the value has actually changed
-    if (title !== getDisplayName(currentFile)) {
+    const pathParts = currentFile.split("/");
+    const fileName = pathParts[pathParts.length - 1];
+    if (title !== getDisplayName(fileName)) {
       onTitleChange?.(title);
     }
   };
@@ -41,7 +46,9 @@ export function Header({ onTitleChange, currentFile }: HeaderProps) {
     } else if (e.key === "Escape") {
       setIsEditing(false);
       if (currentFile) {
-        setTitle(getDisplayName(currentFile));
+        const pathParts = currentFile.split("/");
+        const fileName = pathParts[pathParts.length - 1];
+        setTitle(getDisplayName(fileName));
       }
     }
   };

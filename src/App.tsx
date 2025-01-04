@@ -40,10 +40,13 @@ function App() {
         // Get all files
         const files = await FileService.loadFiles();
 
-        // If we have files, load the most recent one
-        if (files.length > 0) {
-          const content = await FileService.readFile(files[0].path);
-          handleFileSelect(content, files[0].path);
+        // Find the first non-directory file
+        const firstFile = files.find((file) => !file.isDirectory);
+
+        // If we have a non-directory file, load it
+        if (firstFile) {
+          const content = await FileService.readFile(firstFile.path);
+          handleFileSelect(content, firstFile.path);
         }
       } catch (error) {
         console.error("Error loading most recent file:", error);

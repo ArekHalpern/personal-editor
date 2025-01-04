@@ -19,11 +19,6 @@ import {
   SelectValue,
 } from "./select";
 
-interface SettingsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
-
 const FONT_OPTIONS = [
   {
     label: "Roboto",
@@ -62,6 +57,11 @@ const FONT_OPTIONS = [
     description: "Clean sans-serif",
   },
 ];
+
+interface SettingsDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
 
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const { settings, updateSettings, updateConfirmation } = useSettings();
@@ -135,8 +135,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     <span className="text-sm text-muted-foreground">
                       Font Size
                     </span>
-                    <span className="text-sm text-muted-foreground w-12 text-right">
-                      {settings.editor?.fontSize}px
+                    <span className="text-sm w-8 text-right">
+                      {settings.editor?.fontSize || 16}
                     </span>
                   </div>
                   <Slider
@@ -156,8 +156,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     <span className="text-sm text-muted-foreground">
                       Font Weight
                     </span>
-                    <span className="text-sm text-muted-foreground w-12 text-right">
-                      {settings.editor?.fontWeight}
+                    <span className="text-sm w-8 text-right">
+                      {settings.editor?.fontWeight || 400}
                     </span>
                   </div>
                   <Slider
@@ -177,8 +177,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     <span className="text-sm text-muted-foreground">
                       Line Height
                     </span>
-                    <span className="text-sm text-muted-foreground w-12 text-right">
-                      {settings.editor?.lineHeight}
+                    <span className="text-sm w-8 text-right">
+                      {settings.editor?.lineHeight || 1.5}
                     </span>
                   </div>
                   <Slider

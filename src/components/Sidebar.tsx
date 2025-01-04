@@ -153,6 +153,8 @@ export const Sidebar = React.forwardRef<
       return file.name.toLowerCase().includes(searchLower);
     });
 
+    const [isDragOver, setIsDragOver] = useState(false);
+
     return (
       <TooltipProvider>
         <div
@@ -231,7 +233,66 @@ export const Sidebar = React.forwardRef<
                 </Tooltip>
               </div>
               <div className="flex-1 overflow-y-auto">
-                <div className="pb-12">
+                <div
+                  className={cn(
+                    "pb-12 min-h-[200px]",
+                    isDragOver && "bg-accent/50 ring-1 ring-primary"
+                  )}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log("🟨 Root Drag Enter");
+                    setIsDragOver(true);
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log("🟨 Root Drag Over");
+                    e.dataTransfer.dropEffect = "move";
+                    setIsDragOver(true);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // Check if we're actually leaving the root element
+                    const rect = (
+                      e.currentTarget as HTMLElement
+                    ).getBoundingClientRect();
+                    if (
+                      e.clientX < rect.left ||
+                      e.clientX >= rect.right ||
+                      e.clientY < rect.top ||
+                      e.clientY >= rect.bottom
+                    ) {
+                      console.log("🟨 Root Drag Leave");
+                      setIsDragOver(false);
+                    }
+                  }}
+                  onDrop={async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setIsDragOver(false);
+
+                    const sourcePath =
+                      e.dataTransfer.getData("application/x-file") ||
+                      e.dataTransfer.getData("text/plain");
+                    console.log("🟩 Root Drop Event:", { sourcePath });
+                    if (!sourcePath) {
+                      console.log("❌ Root Drop rejected: no source path");
+                      return;
+                    }
+
+                    try {
+                      console.log("✅ Moving file to root:", {
+                        from: sourcePath,
+                      });
+                      await handleMoveFile(sourcePath, "");
+                    } catch (error) {
+                      console.error("Error moving file to root:", error);
+                    }
+                  }}
+                >
                   {filteredFiles.map((file) => (
                     <FileTreeItem
                       key={file.path}

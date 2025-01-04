@@ -8,6 +8,9 @@ import {
   exists,
   rename,
 } from "@tauri-apps/plugin-fs";
+
+import { appDataDir, join } from '@tauri-apps/api/path';
+import { Command } from '@tauri-apps/plugin-shell';
 import { DEFAULT_PATH } from "../../constants";
 import { FileItem, FileOperationResult, CreateNewFileOptions } from "../../types/file";
 import { getDisplayName, getFileName, sanitizeFileName } from "../string";
@@ -128,18 +131,16 @@ export class FileService {
     try {
       const fullPath = `${DEFAULT_PATH}/${path}`;
       
-      // Check if path exists and is a file
+      // First check if it's a directory
+      const isDirectory = await exists(`${fullPath}/.`, { baseDir: BaseDirectory.AppData });
+      if (isDirectory) {
+        throw new Error(`Cannot read directory as file: ${path}`);
+      }
+
+      // Check if file exists
       const fileExists = await exists(fullPath, { baseDir: BaseDirectory.AppData });
       if (!fileExists) {
         throw new Error(`File does not exist at path: ${fullPath}`);
-      }
-
-      // Get file stats to check if it's a directory
-      const files = await readDir(fullPath, { baseDir: BaseDirectory.AppData })
-        .catch(() => null);
-      
-      if (files !== null) {
-        throw new Error(`Cannot read directory as file: ${fullPath}`);
       }
 
       return await readTextFile(fullPath, { baseDir: BaseDirectory.AppData });
@@ -358,6 +359,42 @@ export class FileService {
     } catch (error) {
       console.error("Error during safe rename:", error);
       return { success: false, reason: "error" };
+    }
+  }
+
+  static async revealInFinder(path: string): Promise<void> {
+    try {
+      console.log('Revealing in finder, input path:', path);
+      const fullPath = `${DEFAULT_PATH}/${path}`;
+      console.log('Full path:', fullPath);
+
+      // Check if file exists first
+      const fileExists = await exists(fullPath, { baseDir: BaseDirectory.AppData });
+      console.log('File exists?', fileExists);
+
+      if (!fileExists) {
+        throw new Error(`File does not exist: ${fullPath}`);
+      }
+
+      // Get the actual system path
+      const appDataPath = await appDataDir();
+      const systemPath = await join(appDataPath, fullPath);
+      console.log('System path:', systemPath);
+
+      // Use the reveal command to show in Finder
+      // Note: The -R flag must be part of the same argument string
+      console.log('Executing reveal command for:', systemPath);
+      const command = Command.create('reveal', ['-R', systemPath]);
+      const output = await command.execute();
+      
+      if (output.code !== 0) {
+        throw new Error(`Failed to reveal in Finder: ${output.stderr}`);
+      }
+      
+      console.log('Successfully revealed in Finder');
+    } catch (error) {
+      console.error('Error revealing in finder:', error);
+      throw error;
     }
   }
 } 

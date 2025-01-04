@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { ChevronRight, Folder, File, MoreVertical } from "lucide-react";
+import { ChevronRight, MoreVertical } from "lucide-react";
 import { cn } from "../lib/utils/cn";
 import { FileItem } from "../lib/types/file";
 import {
@@ -12,6 +12,7 @@ import {
 } from "../components/ui/context-menu";
 import { ConfirmDialog } from "./ui/confirm-dialog";
 import { useSettings } from "../lib/stores/settings";
+import { FileService } from "../lib/utils/filesystem/fileService";
 
 interface FileTreeItemProps {
   item: FileItem;
@@ -46,6 +47,8 @@ export function FileTreeItem({
 }: FileTreeItemProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const contextMenuTriggerRef = useRef<HTMLDivElement>(null);
   const { settings } = useSettings();
 
@@ -83,6 +86,15 @@ export function FileTreeItem({
     onRename(item);
   };
 
+  const handleRevealInFinder = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    try {
+      await FileService.revealInFinder(item.path);
+    } catch (error) {
+      console.error("Error revealing in finder:", error);
+    }
+  };
+
   // Filter out the current folder and its children from available move targets
   const availableFolders = allFolders?.filter((folder) => {
     if (item.isDirectory) {
@@ -92,6 +104,99 @@ export function FileTreeItem({
     return true;
   });
 
+  const handleDragStart = (e: React.DragEvent) => {
+    console.log("🟦 Drag Start:", item.path);
+    e.stopPropagation();
+    setIsDragging(true);
+    // Set both data types to ensure compatibility
+    e.dataTransfer.setData("application/x-file", item.path);
+    e.dataTransfer.setData("text/plain", item.path);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    console.log("🟦 Drag End:", item.path);
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    // Only handle drag over for directories
+    if (!item.isDirectory) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("🟨 Drag Over Directory:", item.path);
+    e.dataTransfer.dropEffect = "move";
+    setIsDragOver(true);
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    // Only handle drag enter for directories
+    if (!item.isDirectory) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("🟨 Drag Enter Directory:", item.path);
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!item.isDirectory) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Check if we're actually leaving the element
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    if (
+      e.clientX < rect.left ||
+      e.clientX >= rect.right ||
+      e.clientY < rect.top ||
+      e.clientY >= rect.bottom
+    ) {
+      console.log("🟨 Drag Leave Directory:", item.path);
+      setIsDragOver(false);
+    }
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    // Try both data types
+    const sourcePath =
+      e.dataTransfer.getData("application/x-file") ||
+      e.dataTransfer.getData("text/plain");
+    console.log("🟩 Drop Event:", {
+      source: sourcePath,
+      target: item.path,
+      isDirectory: item.isDirectory,
+    });
+
+    // Don't allow dropping onto itself or non-directories
+    if (!item.isDirectory || sourcePath === item.path || !sourcePath) {
+      console.log("❌ Drop rejected:", {
+        reason: !item.isDirectory ? "not a directory" : "same path",
+      });
+      return;
+    }
+
+    // Don't allow dropping a folder into its own child
+    if (item.path.startsWith(sourcePath + "/")) {
+      console.log("❌ Drop rejected: cannot drop parent into child");
+      return;
+    }
+
+    try {
+      console.log("✅ Moving file:", { from: sourcePath, to: item.path });
+      await onMoveFile?.(sourcePath, item.path);
+    } catch (error) {
+      console.error("Error moving file:", error);
+    }
+  };
+
   return (
     <>
       <ContextMenu>
@@ -99,10 +204,22 @@ export function FileTreeItem({
           <div
             className={cn(
               "w-full text-left group/item flex items-center gap-2 px-4 py-1.5 hover:bg-accent cursor-pointer",
-              "transition-colors duration-200 ease-in-out",
-              isActive && "bg-accent"
+              "transition-colors duration-200 ease-in-out relative",
+              isActive && "bg-accent",
+              isDragging && "opacity-50",
+              isDragOver &&
+                item.isDirectory &&
+                "bg-accent/50 ring-1 ring-primary",
+              item.isDirectory && "font-medium"
             )}
             style={{ paddingLeft: `${paddingLeft}px` }}
+            draggable
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
             onClick={() => {
               if (item.isDirectory) {
                 setIsExpanded(!isExpanded);
@@ -119,6 +236,7 @@ export function FileTreeItem({
                 } else {
                   onSelect(item);
                 }
+                e.preventDefault();
               }
             }}
           >
@@ -130,11 +248,6 @@ export function FileTreeItem({
                     isExpanded && "rotate-90"
                   )}
                 />
-              )}
-              {item.isDirectory ? (
-                <Folder className="h-4 w-4 shrink-0 text-muted-foreground" />
-              ) : (
-                <File className="h-4 w-4 shrink-0 text-muted-foreground" />
               )}
               {editingFile === item.path ? (
                 <Input
@@ -167,7 +280,6 @@ export function FileTreeItem({
               className="h-6 w-6 opacity-0 group-hover/item:opacity-100 transition-opacity shrink-0"
               onClick={(e) => {
                 e.stopPropagation();
-                // Simulate a right-click at the button's position
                 contextMenuTriggerRef.current?.dispatchEvent(
                   new MouseEvent("contextmenu", {
                     bubbles: true,
@@ -184,6 +296,9 @@ export function FileTreeItem({
         <ContextMenuContent>
           <ContextMenuItem onClick={handleRename}>Rename</ContextMenuItem>
           <ContextMenuItem onClick={handleDelete}>Delete</ContextMenuItem>
+          <ContextMenuItem onClick={handleRevealInFinder}>
+            Reveal in Finder
+          </ContextMenuItem>
           {availableFolders && availableFolders.length > 0 && (
             <>
               <ContextMenuItem className="font-semibold">
