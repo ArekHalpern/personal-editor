@@ -2,7 +2,13 @@ export interface UserSettings {
   confirmations: {
     fileDelete: boolean;
   };
-  // Add more setting categories here as needed
+  api: {
+    openai: {
+      apiKey?: string;
+      models: string[];
+      selectedModel?: string;
+    };
+  };
   editor?: {
     fontSize?: number;
     lineHeight?: number;

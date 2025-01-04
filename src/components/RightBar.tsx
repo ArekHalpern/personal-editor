@@ -15,6 +15,7 @@ import { Editor } from "@tiptap/react";
 import { ResizeHandle } from "./ui/resize-handle";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { getDisplayName } from "../lib/utils/string";
+import { aiService } from "../lib/services/aiService";
 
 interface Message {
   role: "user" | "assistant";
@@ -37,21 +38,6 @@ interface RightBarProps {
   onEnhance: (original: string, enhanced: string, prompt: string) => void;
   onWidthChange?: (width: number) => void;
   currentFile?: string;
-}
-
-interface ChatResponse {
-  message: string;
-  enhancedText?: {
-    lines: Array<{
-      content: string;
-      type: string;
-      id: string;
-      number: number;
-      timestamp: number;
-      lastModified: number;
-      aiEnhanced: boolean;
-    }>;
-  };
 }
 
 export function RightBar({
@@ -125,6 +111,12 @@ export function RightBar({
 
     setIsEnhancing(true);
     try {
+      console.log("Starting chat request:", {
+        prompt,
+        currentFile,
+        hasSelection: editor.state.selection.from !== editor.state.selection.to,
+      });
+
       // Add user message immediately
       const userMessage: Message = {
         role: "user",
@@ -150,24 +142,20 @@ export function RightBar({
       const fullContent = editor.getHTML();
       const lineMetadata = editor.storage.lineTracker.lines;
 
-      // Call the chat endpoint
-      const response = await fetch("http://localhost:3001/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: prompt,
-          lineMetadata: Array.from(lineMetadata.values()),
-          selectedText,
-          fullContent,
-          filename: getDisplayName(currentFile),
-        }),
+      // Call the AI service
+      const data = await aiService.chat({
+        message: prompt,
+        lineMetadata: Array.from(lineMetadata.values()),
+        selectedText,
+        fullContent,
+        filename: getDisplayName(currentFile),
       });
 
-      if (!response.ok) throw new Error("Failed to get response");
-
-      const data = (await response.json()) as ChatResponse;
+      console.log("Received AI response:", {
+        hasMessage: !!data.message,
+        hasEnhancedText: !!data.enhancedText,
+        numberOfLines: data.enhancedText?.lines.length,
+      });
 
       // Remove loading message and add actual response
       setMessages((prev) =>
@@ -216,7 +204,10 @@ export function RightBar({
       setMessages((prev) =>
         prev.slice(0, -1).concat({
           role: "assistant",
-          content: "Sorry, I encountered an error. Please try again.",
+          content:
+            error instanceof Error && error.message.includes("API key")
+              ? "Please configure your OpenAI API key in settings."
+              : "Sorry, I encountered an error. Please try again.",
           timestamp: new Date(),
         })
       );
