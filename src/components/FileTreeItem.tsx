@@ -203,9 +203,9 @@ export function FileTreeItem({
         <ContextMenuTrigger ref={contextMenuTriggerRef}>
           <div
             className={cn(
-              "w-full text-left group/item flex items-center gap-2 px-4 py-1.5 hover:bg-accent cursor-pointer",
+              "w-full text-left group/item flex items-center gap-2 px-4 py-1.5 hover:bg-accent hover:text-accent-foreground cursor-pointer",
               "transition-colors duration-200 ease-in-out relative",
-              isActive && "bg-accent",
+              isActive && "bg-accent text-accent-foreground",
               isDragging && "opacity-50",
               isDragOver &&
                 item.isDirectory &&

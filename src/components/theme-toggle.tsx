@@ -16,22 +16,13 @@ export function ThemeToggle() {
         aria-label="Light theme"
       />
       <button
-        onClick={() => setTheme("dark")}
+        onClick={() => setTheme("dawn")}
         className={cn(
           "w-4 h-4 transition-all -ml-[1px]",
-          "bg-zinc-950 border border-border",
-          theme === "dark" ? "ring-1 ring-primary/50" : ""
+          "bg-[hsl(150,60%,85%)] border border-border",
+          theme === "dawn" ? "ring-1 ring-primary/50" : ""
         )}
-        aria-label="Dark theme"
-      />
-      <button
-        onClick={() => setTheme("modern")}
-        className={cn(
-          "w-4 h-4 transition-all -ml-[1px]",
-          "bg-[hsl(37,74%,67%)] border border-border",
-          theme === "modern" ? "ring-1 ring-primary/50" : ""
-        )}
-        aria-label="Modern theme"
+        aria-label="Dawn theme"
       />
       <button
         onClick={() => setTheme("dusk")}
@@ -50,6 +41,15 @@ export function ThemeToggle() {
           theme === "ocean" ? "ring-1 ring-primary/50" : ""
         )}
         aria-label="Ocean theme"
+      />
+      <button
+        onClick={() => setTheme("dark")}
+        className={cn(
+          "w-4 h-4 transition-all -ml-[1px]",
+          "bg-zinc-950 border border-border",
+          theme === "dark" ? "ring-1 ring-primary/50" : ""
+        )}
+        aria-label="Dark theme"
       />
     </div>
   );

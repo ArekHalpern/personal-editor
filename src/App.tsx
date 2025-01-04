@@ -13,6 +13,7 @@ import { editorConfig, EnhancementHistoryItem } from "./lib/types/editor";
 import { Header } from "./components/Header";
 import { FileService } from "./lib/utils/filesystem/fileService";
 import { useSettings } from "./lib/stores/settings";
+import { ScrollArea } from "./components/ui/scroll-area";
 
 function App() {
   const { settings } = useSettings();
@@ -317,12 +318,12 @@ function App() {
                   }}
                 />
                 <div className="flex-1 min-h-0 relative">
-                  <div className="absolute inset-0 overflow-y-auto">
+                  <ScrollArea>
                     <div className="min-h-full pb-[60px]">
                       <BubbleMenu editor={editor} onEnhance={handleEnhance} />
                       <EditorContent editor={editor} className="h-full" />
                     </div>
-                  </div>
+                  </ScrollArea>
                 </div>
                 <Footer
                   lastSaved={lastSaved}

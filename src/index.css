@@ -60,31 +60,26 @@
     --ring: 24 5.7% 82.9%;
   }
 
-  .modern {
-    --background: 37, 74%, 67%;
-    --foreground: 240 10% 3.9%;
-    --card: 30 80% 55%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 30 80% 55%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 232, 74%, 43%;
-    --primary-foreground: 30 80% 55%;
-    --secondary: 30 80% 55%;
-    --secondary-foreground: 240 10% 3.9%;
-    --muted: 30 80% 55%;
-    --muted-foreground: 232, 74%, 43%;
-    --accent: 30 80% 55%;
-    --accent-foreground: 232, 74%, 43%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 30 80% 55%;
-    --border: 240 10% 3.9%;
-    --input: 240 10% 3.9%;
-    --ring: 240 10% 3.9%;
-    --chart-1: 217 91% 60%;
-    --chart-2: 187 91% 60%;
-    --chart-3: 247 91% 60%;
-    --chart-4: 157 91% 60%;
-    --chart-5: 277 91% 60%;
+  .dawn {
+    --background: 150 30% 98%;
+    --foreground: 150 40% 15%;
+    --card: 150 30% 96%;
+    --card-foreground: 150 40% 15%;
+    --popover: 150 30% 96%;
+    --popover-foreground: 150 40% 15%;
+    --primary: 140 60% 45%;
+    --primary-foreground: 150 30% 98%;
+    --secondary: 150 30% 94%;
+    --secondary-foreground: 150 40% 15%;
+    --muted: 150 30% 94%;
+    --muted-foreground: 150 35% 45%;
+    --accent: 140 60% 45%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 75% 50%;
+    --destructive-foreground: 150 30% 98%;
+    --border: 150 30% 90%;
+    --input: 150 30% 90%;
+    --ring: 140 60% 45%;
   }
 
   .dusk {

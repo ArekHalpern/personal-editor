@@ -1,4 +1,4 @@
-import { LineMetadata } from "../../server/types/editor";
+import { LineMetadata } from "./editor";
 
 export type EditOperation = 
   | 'inline_edit'
