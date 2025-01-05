@@ -6,7 +6,8 @@ export type EditOperation =
   | 'continue_text'
   | 'summarize_text'
   | 'analyze_text'
-  | 'delete_text';
+  | 'delete_text'
+  | 'generate_file';
 
 export interface BaseResponse {
   operation: EditOperation;
@@ -61,13 +62,26 @@ export interface DeleteTextResponse extends BaseResponse {
   linesToDelete: number[];
 }
 
+export interface GenerateFileRequest extends FileGenerationCollectedInfo {
+  filename: string;
+  description: string;
+  content?: string;
+}
+
+export interface GenerateFileResponse extends BaseResponse {
+  operation: 'generate_file';
+  filename: string;
+  content: string;
+}
+
 export type AssistantResponse = 
   | InlineEditResponse 
   | MultiLineEditResponse 
   | ContinueTextResponse 
   | SummarizeTextResponse 
   | AnalyzeTextResponse
-  | DeleteTextResponse;
+  | DeleteTextResponse
+  | GenerateFileResponse;
 
 export interface AssistantRequest {
   message: string;
@@ -91,4 +105,31 @@ export interface EnhanceResponse {
     type: 'addition' | 'deletion' | 'modification';
     description: string;
   }[];
+}
+
+export interface FileGenerationCollectedInfo {
+  filename?: string;
+  description?: string;
+  outline?: string;
+  requirements?: string[];
+  generatedFilePath?: string;
+}
+
+export interface ChatResponse {
+  message: string;
+  enhancedText?: {
+    lines: LineMetadata[];
+  };
+  analysis?: {
+    filename: string;
+    summary: string;
+    purpose: string;
+    keyComponents: string[];
+    technicalDetails: string;
+  };
+  error?: boolean;
+  fileGeneration?: {
+    shouldGenerate: boolean;
+    collectedInfo?: FileGenerationCollectedInfo;
+  };
 } 

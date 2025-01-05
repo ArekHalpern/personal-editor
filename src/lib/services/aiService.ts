@@ -8,9 +8,13 @@ import {
   AnalyzeTextResponse, 
   DeleteTextResponse,
   EnhanceRequest,
-  EnhanceResponse 
+  EnhanceResponse,
+  GenerateFileRequest,
+  GenerateFileResponse,
+  FileGenerationCollectedInfo
 } from '../types/assistant';
 import { parseCommand } from '../utils/commandParser';
+import { FileService } from "../utils/filesystem/fileService";
 
 interface ChatRequest {
   message: string;
@@ -18,6 +22,12 @@ interface ChatRequest {
   selectedText?: string;
   fullContent: string;
   filename: string;
+  context?: {
+    fileGenerationState?: {
+      inProgress: boolean;
+      collectedInfo?: FileGenerationCollectedInfo;
+    };
+  };
 }
 
 interface ChatResponse {
@@ -33,6 +43,15 @@ interface ChatResponse {
     technicalDetails: string;
   };
   error?: boolean;
+  fileGeneration?: {
+    shouldGenerate: boolean;
+    collectedInfo?: {
+      filename?: string;
+      description?: string;
+      outline?: string;
+      requirements?: string[];
+    };
+  };
 }
 
 class AIService {
@@ -68,7 +87,15 @@ class AIService {
     const client = this.getClient();
     const settings = useSettings.getState().settings;
     const model = settings.api.openai.selectedModel || settings.api.openai.models[0];
-    
+
+    // Check if this is a file generation request
+    const isFileGenerationRequest = this.isFileGenerationRequest(request.message);
+    const isInFileGenerationFlow = request.context?.fileGenerationState?.inProgress;
+
+    if (isFileGenerationRequest || isInFileGenerationFlow) {
+      return this.handleFileGenerationChat(request);
+    }
+
     // Log initial line metadata
     console.log('📊 Initial Line Metadata:', {
       totalLines: request.lineMetadata.length,
@@ -198,6 +225,61 @@ ${request.filename ? `File: ${request.filename}` : ''}`
     return response;
   }
 
+  async generateFile(request: GenerateFileRequest): Promise<GenerateFileResponse> {
+    const client = this.getClient();
+    const settings = useSettings.getState().settings;
+    const model = settings.api.openai.selectedModel || settings.api.openai.models[0];
+
+    console.log("📤 Generating new file with request:", {
+      model,
+      request,
+      timestamp: new Date().toISOString()
+    });
+
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      {
+        role: "system",
+        content: this.getSystemPrompt('generate_file', request.filename)
+      },
+      {
+        role: "user",
+        content: `Please create a new file named "${request.filename}".
+          Description of desired content: "${request.description}"
+          Additional outline/context: "${request.outline || "N/A"}"
+
+          Provide the final JSON response with filename, content, and a short message.`
+      }
+    ];
+
+    try {
+      const completion = await client.chat.completions.create({
+        model,
+        messages,
+        response_format: { type: "json_object" }
+      });
+
+      console.log("📥 Raw AI response:", completion.choices[0].message);
+
+      const result = JSON.parse(
+        completion.choices[0].message.content || '{"error":true,"message":"No valid response"}'
+      ) as GenerateFileResponse;
+
+      if (!result.content || !result.filename) {
+        throw new Error("Invalid AI response; missing content or filename field.");
+      }
+
+      return {
+        operation: 'generate_file',
+        filename: result.filename,
+        content: result.content,
+        message: result.message || `Generated file: ${result.filename}`
+      };
+    } catch (error: any) {
+      console.error("Error generating file:", error);
+      throw error;
+    }
+  }
+
   private getSystemPrompt(operation: EditOperation, filename: string, isFileQuery?: boolean): string {
     const basePrompt = `You are a precise document editor working on "${filename}". `;
     const responseFormat = 'Respond in JSON format following the specified structure for each operation type.\n\nIMPORTANT: Always use type: "paragraph" for all content. Never use headers or list items.\n\nIMPORTANT: Pay attention to empty lines (content: " ") in the document. These represent intentional spacing between content lines. Maintain the same spacing pattern when adding or modifying content.';
@@ -314,6 +396,23 @@ ${request.filename ? `File: ${request.filename}` : ''}`
         '  "message": "Description of deletion",\n' +
         '  "linesToDelete": number[]\n' +
         '}',
+
+      'generate_file': basePrompt +
+        'Your task is to generate a complete, well-structured file based on the user\'s description.\n\n' +
+        'Rules:\n' +
+        '1. Create appropriate content that matches the requested file type\n' +
+        '2. Include all necessary sections and components\n' +
+        '3. Follow best practices for the file type\n' +
+        '4. Ensure the content is complete and self-contained\n' +
+        '5. Add appropriate comments and documentation\n\n' +
+        responseFormat + '\n' +
+        'JSON Response Structure:\n' +
+        '{\n' +
+        '  "operation": "generate_file",\n' +
+        '  "message": "Description of the generated file",\n' +
+        '  "filename": string,\n' +
+        '  "content": string\n' +
+        '}'
     };
 
     return operationPrompts[operation];
@@ -606,6 +705,209 @@ Rules:
           enhancedText: undefined
         };
     }
+  }
+
+  private isFileGenerationRequest(message: string): boolean {
+    const fileGenerationKeywords = [
+      /help.*write.*(?:prd|spec|document|doc)/i,
+      /create.*(?:prd|spec|document|doc)/i,
+      /generate.*(?:prd|spec|document|doc)/i,
+      /need.*(?:prd|spec|document|doc)/i
+    ];
+
+    return fileGenerationKeywords.some(pattern => pattern.test(message));
+  }
+
+  private async handleFileGenerationChat(request: ChatRequest): Promise<ChatResponse> {
+    const client = this.getClient();
+    const settings = useSettings.getState().settings;
+    const model = settings.api.openai.selectedModel || settings.api.openai.models[0];
+
+    // Check if we can infer enough information to generate immediately
+    const inferredInfo = this.inferFileGenerationInfo(request.message);
+    if (inferredInfo) {
+      const generatedFile = await this.generateFile(inferredInfo);
+      
+      // If a file was generated, refresh the sidebar and open the file
+      try {
+        await FileService.writeFile(generatedFile.filename, generatedFile.content);
+        console.log("✅ File written successfully:", generatedFile.filename);
+        
+        const collectedInfo: FileGenerationCollectedInfo = {
+          filename: generatedFile.filename,
+          description: inferredInfo.description,
+          outline: inferredInfo.outline,
+          generatedFilePath: generatedFile.filename
+        };
+        
+        return {
+          message: `I've generated a baseline ${inferredInfo.description}. You can now view and edit it, and I'll help you refine it further.\n\nFile generated: ${generatedFile.filename}`,
+          fileGeneration: {
+            shouldGenerate: true,
+            collectedInfo
+          }
+        };
+      } catch (error: any) {
+        console.error("❌ Error writing file:", error);
+        const collectedInfo: FileGenerationCollectedInfo = {
+          filename: inferredInfo.filename,
+          description: inferredInfo.description,
+          outline: inferredInfo.outline
+        };
+        
+        return {
+          message: `I generated the content but couldn't save the file. Error: ${error.message}`,
+          error: true,
+          fileGeneration: {
+            shouldGenerate: false,
+            collectedInfo
+          }
+        };
+      }
+    }
+
+    // If we can't infer enough, fall back to conversation mode
+    const systemPrompt = `You are a helpful AI assistant specializing in document planning and generation.
+Your task is to help users create well-structured documents through conversation.
+
+Guidelines:
+1. Be proactive - if you can reasonably infer what the user needs, proceed with generation
+2. Only ask essential questions if critical information is missing
+3. Keep responses brief and focused
+4. Prioritize getting started with a baseline document that can be improved
+
+Respond in JSON format:
+{
+  "message": "Your response to the user",
+  "fileGeneration": {
+    "shouldGenerate": boolean,
+    "collectedInfo": {
+      "filename": string (optional),
+      "description": string (optional),
+      "outline": string (optional),
+      "requirements": string[] (optional),
+      "generatedFilePath": string (optional)
+    }
+  }
+}`;
+
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      {
+        role: "system",
+        content: systemPrompt
+      },
+      {
+        role: "user",
+        content: request.message
+      }
+    ];
+
+    const completion = await client.chat.completions.create({
+      model,
+      messages,
+      response_format: { type: "json_object" }
+    });
+
+    const response = JSON.parse(completion.choices[0].message.content || '{}');
+
+    // If we have all needed info and should generate, do it
+    if (response.fileGeneration?.shouldGenerate && response.fileGeneration.collectedInfo) {
+      const generatedFile = await this.generateFile({
+        filename: response.fileGeneration.collectedInfo.filename,
+        description: response.fileGeneration.collectedInfo.description,
+        outline: response.fileGeneration.collectedInfo.outline
+      });
+
+      return {
+        message: `${response.message}\n\nI've generated the file: ${generatedFile.filename}\n\n${generatedFile.message}`,
+        fileGeneration: response.fileGeneration
+      };
+    }
+
+    return {
+      message: response.message,
+      fileGeneration: response.fileGeneration
+    };
+  }
+
+  private inferFileGenerationInfo(message: string): GenerateFileRequest | null {
+    // Extract document type and subject
+    const docTypeMatch = message.match(/(?:generate|create|write|make)\s+(?:a|an)?\s+([a-z\s]+)(?:\s+for|about|on)\s+(?:a|an)?\s+([^,.!?]+)/i);
+    if (!docTypeMatch) return null;
+
+    const [, docType, subject] = docTypeMatch;
+    const cleanDocType = docType.trim().toLowerCase();
+    const cleanSubject = subject.trim().toLowerCase();
+
+    // Format filename based on document type
+    const getFileName = (type: string, subj: string) => {
+      const parts = subj.split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1));
+      return `${parts.join('')}_${type.replace(/\s+/g, '_')}.html`;
+    };
+
+    // Get document structure based on type
+    const getDocumentStructure = (type: string) => {
+      switch (type) {
+        case 'prd':
+        case 'product requirements document':
+          return {
+            title: 'Product Requirements Document',
+            sections: [
+              { title: 'Overview', level: 1 },
+              { title: 'Purpose', level: 2 },
+              { title: 'Target Users', level: 2 },
+              { title: 'Key Features', level: 1 },
+              { title: 'Technical Requirements', level: 1 },
+              { title: 'User Experience', level: 1 },
+              { title: 'Implementation Phases', level: 1 },
+              { title: 'Success Metrics', level: 1 }
+            ]
+          };
+        case 'design document':
+        case 'design spec':
+          return {
+            title: 'Design Document',
+            sections: [
+              { title: 'Introduction', level: 1 },
+              { title: 'System Architecture', level: 1 },
+              { title: 'Technical Design', level: 1 },
+              { title: 'Data Models', level: 2 },
+              { title: 'APIs and Interfaces', level: 2 },
+              { title: 'User Interface Design', level: 1 },
+              { title: 'Security Considerations', level: 1 },
+              { title: 'Performance Requirements', level: 1 },
+              { title: 'Testing Strategy', level: 1 }
+            ]
+          };
+        default:
+          return {
+            title: 'Document',
+            sections: [
+              { title: 'Introduction', level: 1 },
+              { title: 'Overview', level: 1 },
+              { title: 'Details', level: 1 },
+              { title: 'Implementation', level: 1 },
+              { title: 'Conclusion', level: 1 }
+            ]
+          };
+      }
+    };
+
+    const structure = getDocumentStructure(cleanDocType);
+    const filename = getFileName(cleanDocType, cleanSubject);
+
+    // Generate HTML content
+    const content = `<h1>${structure.title}: ${subject.charAt(0).toUpperCase() + subject.slice(1)}</h1>
+${structure.sections.map(section => `
+<h${section.level}>${section.title}</h${section.level}>
+<p>[${section.title} content will be generated here]</p>
+`).join('\n')}`;
+
+    return {
+      filename,
+      description: `${cleanDocType} for ${cleanSubject}`,
+      content
+    };
   }
 }
 

@@ -16,12 +16,26 @@ import { ResizeHandle } from "./ui/resize-handle";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { getDisplayName } from "../lib/utils/string";
 import { aiService } from "../lib/services/aiService";
+import { FileService } from "../lib/utils/filesystem/fileService";
+import { FileGenerationCollectedInfo } from "../lib/types/assistant";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: Date;
   isLoading?: boolean;
+  loadingSteps?: {
+    step: string;
+    status: "pending" | "complete" | "error";
+    detail?: string;
+  }[];
+}
+
+type FileGenerationInfo = FileGenerationCollectedInfo;
+
+interface FileGenerationState {
+  inProgress: boolean;
+  collectedInfo?: FileGenerationInfo;
 }
 
 interface RightBarProps {
@@ -38,6 +52,17 @@ interface RightBarProps {
   onEnhance: (original: string, enhanced: string, prompt: string) => void;
   onWidthChange?: (width: number) => void;
   currentFile?: string;
+  onFileChange?: (filename: string) => void;
+}
+
+function hasGeneratedFilePath(
+  info: any
+): info is { generatedFilePath: string } {
+  return (
+    info &&
+    typeof info.generatedFilePath === "string" &&
+    info.generatedFilePath.length > 0
+  );
 }
 
 export function RightBar({
@@ -49,12 +74,15 @@ export function RightBar({
   onEnhance,
   onWidthChange,
   currentFile = "untitled.html",
+  onFileChange,
 }: RightBarProps) {
   const [prompt, setPrompt] = React.useState("");
   const [isEnhancing, setIsEnhancing] = React.useState(false);
   const [width, setWidth] = React.useState(400);
   const [messages, setMessages] = React.useState<Message[]>([]);
   const scrollRef = React.useRef<HTMLDivElement>(null);
+  const [fileGenerationState, setFileGenerationState] =
+    React.useState<FileGenerationState | null>(null);
 
   const scrollToBottom = React.useCallback(() => {
     if (scrollRef.current) {
@@ -125,14 +153,39 @@ export function RightBar({
       };
       setMessages((prev) => [...prev, userMessage]);
 
-      // Add loading message for assistant
+      // Add loading message with steps
       const loadingMessage: Message = {
         role: "assistant",
         content: "",
         timestamp: new Date(),
         isLoading: true,
+        loadingSteps: [
+          { step: "Analyzing request", status: "pending" },
+          { step: "Determining document structure", status: "pending" },
+          { step: "Generating content", status: "pending" },
+          { step: "Creating file", status: "pending" },
+        ],
       };
       setMessages((prev) => [...prev, loadingMessage]);
+
+      // Update loading steps as we progress
+      const updateLoadingStep = (
+        stepIndex: number,
+        status: "complete" | "error",
+        detail?: string
+      ) => {
+        setMessages((prev) => {
+          const messages = [...prev];
+          const loadingMessage = messages[messages.length - 1];
+          if (loadingMessage.loadingSteps) {
+            loadingMessage.loadingSteps[stepIndex].status = status;
+            if (detail) {
+              loadingMessage.loadingSteps[stepIndex].detail = detail;
+            }
+          }
+          return messages;
+        });
+      };
 
       // Get the current document state
       const selection = editor.state.selection;
@@ -142,14 +195,61 @@ export function RightBar({
       const fullContent = editor.getHTML();
       const lineMetadata = editor.storage.lineTracker.lines;
 
-      // Call the AI service
+      updateLoadingStep(0, "complete");
+
+      // Call the AI service with file generation context if needed
       const data = await aiService.chat({
         message: prompt,
         lineMetadata: Array.from(lineMetadata.values()),
         selectedText,
         fullContent,
         filename: getDisplayName(currentFile),
+        context: fileGenerationState ? { fileGenerationState } : undefined,
       });
+
+      updateLoadingStep(1, "complete");
+
+      // Update file generation state if needed
+      if (data.fileGeneration) {
+        setFileGenerationState({
+          inProgress: !data.fileGeneration.shouldGenerate,
+          collectedInfo: {
+            ...fileGenerationState?.collectedInfo,
+            ...data.fileGeneration.collectedInfo,
+          },
+        });
+
+        updateLoadingStep(2, "complete");
+
+        // If a file was generated, refresh the sidebar and open the file
+        if (
+          data.fileGeneration.shouldGenerate &&
+          data.fileGeneration.collectedInfo &&
+          hasGeneratedFilePath(data.fileGeneration.collectedInfo)
+        ) {
+          const filePath = data.fileGeneration.collectedInfo.generatedFilePath;
+          // Find and refresh the sidebar
+          const sidebarElement = document.querySelector("[data-sidebar-ref]");
+          if (sidebarElement) {
+            const loadFilesFunction = (sidebarElement as any).__loadFiles;
+            if (loadFilesFunction) {
+              await loadFilesFunction();
+
+              // Read and load the generated file
+              try {
+                const content = await FileService.readFile(filePath);
+                editor.commands.setContent(content);
+                updateLoadingStep(3, "complete", filePath);
+                // Notify parent about the file change
+                onFileChange?.(filePath);
+              } catch (error) {
+                console.error("Error loading generated file:", error);
+                updateLoadingStep(3, "error", "Failed to load generated file");
+              }
+            }
+          }
+        }
+      }
 
       console.log("Received AI response:", {
         hasMessage: !!data.message,
@@ -166,8 +266,8 @@ export function RightBar({
         })
       );
 
-      // Update editor content if there are changes
-      if (data.enhancedText?.lines) {
+      // If we're not in file generation mode, handle normal editor updates
+      if (!data.fileGeneration && data.enhancedText?.lines) {
         const originalContent = selectedText || fullContent;
         const enhancedContent = data.enhancedText.lines
           .map((line) => line.content)
@@ -200,7 +300,20 @@ export function RightBar({
       setPrompt("");
     } catch (error) {
       console.error("Error during chat:", error);
-      // Remove loading message and add error message
+      // Update all remaining pending steps to error
+      setMessages((prev) => {
+        const messages = [...prev];
+        const loadingMessage = messages[messages.length - 1];
+        if (loadingMessage.loadingSteps) {
+          loadingMessage.loadingSteps.forEach((step) => {
+            if (step.status === "pending") {
+              step.status = "error";
+            }
+          });
+        }
+        return messages;
+      });
+      // Add error message
       setMessages((prev) =>
         prev.slice(0, -1).concat({
           role: "assistant",
@@ -214,6 +327,32 @@ export function RightBar({
     } finally {
       setIsEnhancing(false);
     }
+  };
+
+  const renderLoadingSteps = (steps: Message["loadingSteps"]) => {
+    if (!steps) return null;
+
+    return (
+      <div className="space-y-2">
+        {steps.map((step, index) => (
+          <div key={index} className="flex items-center gap-2">
+            {step.status === "pending" ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : step.status === "complete" ? (
+              <div className="h-3 w-3 rounded-full bg-green-500" />
+            ) : (
+              <div className="h-3 w-3 rounded-full bg-red-500" />
+            )}
+            <span className="text-sm">{step.step}</span>
+            {step.detail && (
+              <span className="text-xs text-muted-foreground">
+                ({step.detail})
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -252,7 +391,7 @@ export function RightBar({
       {!isCollapsed && (
         <div className="flex-1 overflow-hidden flex flex-col">
           <Tabs defaultValue="chat" className="flex-1 flex flex-col h-full">
-            <div className="flex-none flex items-center border-b px-1">
+            <div className="flex-none flex items-center justify-between border-b px-1">
               <TabsList className="h-10 p-1 gap-1">
                 <TabsTrigger value="chat" className="flex items-center gap-2">
                   <Sparkles className="h-3.5 w-3.5" />
@@ -294,9 +433,12 @@ export function RightBar({
                           )}
                         >
                           {message.isLoading ? (
-                            <div className="flex items-center gap-2">
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                              <span>Thinking...</span>
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center gap-2">
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                                <span>Generating document...</span>
+                              </div>
+                              {renderLoadingSteps(message.loadingSteps)}
                             </div>
                           ) : (
                             message.content

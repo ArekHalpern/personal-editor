@@ -268,6 +268,11 @@ function App() {
     }
   }, [settings.editor]);
 
+  const handleFileChange = (filename: string) => {
+    console.log("Selected file:", filename);
+    setCurrentFile(filename);
+  };
+
   if (!editor) {
     return null;
   }
@@ -348,6 +353,7 @@ function App() {
           onEnhance={handleEnhance}
           onWidthChange={setRightBarWidth}
           currentFile={currentFile}
+          onFileChange={handleFileChange}
         />
       </div>
     </ThemeProvider>

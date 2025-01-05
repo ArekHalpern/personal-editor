@@ -165,6 +165,12 @@ export const Sidebar = React.forwardRef<
             className
           )}
           style={!isCollapsed ? { width: `${width}px` } : undefined}
+          data-sidebar-ref=""
+          ref={(el) => {
+            if (el) {
+              (el as any).__loadFiles = loadFiles;
+            }
+          }}
         >
           {!isCollapsed && (
             <ResizeHandle onResize={handleResize} className="bottom-9" />
